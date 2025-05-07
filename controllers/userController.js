@@ -1,5 +1,6 @@
 const User = require('../models/User');
 
+// Update user profile
 const updateProfile = async (req, res) => {
   try {
     const userId = req.params.id;
@@ -16,10 +17,11 @@ const updateProfile = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to update this profile' });
     }
 
-    // Remove sensitive fields from updates
+    // Remove sensitive fields from updates (e.g., password and role)
     delete updates.password;
     delete updates.role;
 
+    // Perform the update
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       { $set: updates },

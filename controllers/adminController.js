@@ -2,7 +2,7 @@ const User = require('../models/User');
 const Vendor = require('../models/Vendor');
 const Booking = require('../models/Booking');
 
-// Get all users
+// Get all users (excluding passwords)
 const getUsers = async (req, res) => {
   try {
     const users = await User.find().select('-password');
@@ -12,10 +12,11 @@ const getUsers = async (req, res) => {
   }
 };
 
-// Update user status
+// Update user status (e.g., active, blocked)
 const updateUserStatus = async (req, res) => {
   try {
     const { status } = req.body;
+
     const user = await User.findByIdAndUpdate(
       req.params.id,
       { status },
@@ -32,7 +33,7 @@ const updateUserStatus = async (req, res) => {
   }
 };
 
-// Get all vendors
+// Get all vendors with linked user info
 const getVendors = async (req, res) => {
   try {
     const vendors = await Vendor.find().populate('user', 'name email -_id');
@@ -42,10 +43,11 @@ const getVendors = async (req, res) => {
   }
 };
 
-// Update vendor status
+// Update vendor status (e.g., approved, rejected)
 const updateVendorStatus = async (req, res) => {
   try {
     const { status } = req.body;
+
     const vendor = await Vendor.findByIdAndUpdate(
       req.params.id,
       { status },
@@ -62,7 +64,7 @@ const updateVendorStatus = async (req, res) => {
   }
 };
 
-// Get all bookings
+// Get all bookings with user and vendor info
 const getBookings = async (req, res) => {
   try {
     const bookings = await Booking.find()
@@ -74,10 +76,11 @@ const getBookings = async (req, res) => {
   }
 };
 
-// Update booking status
+// Update booking status (e.g., confirmed, cancelled)
 const updateBookingStatus = async (req, res) => {
   try {
     const { status } = req.body;
+
     const booking = await Booking.findByIdAndUpdate(
       req.params.id,
       { status },

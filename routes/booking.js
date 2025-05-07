@@ -1,11 +1,25 @@
 const express = require('express');
+const Booking = require('../models/Booking');
 const router = express.Router();
-const { createBooking, getBookingsByCustomer, getBookingsByVendor, getBookings } = require('../controllers/bookingController');
-const { verifyToken } = require('../middleware/authMiddleware');
 
-router.get('/', verifyToken, getBookings);
-router.post('/', verifyToken, createBooking);
-router.get('/customer/:id', verifyToken, getBookingsByCustomer);
-router.get('/vendor/:id', verifyToken, getBookingsByVendor);
+// Create a booking
+router.post('/', async (req, res) => {
+  try {
+    const booking = await Booking.create(req.body);
+    res.status(201).json(booking);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create booking' });
+  }
+});
+
+// Get all bookings
+router.get('/', async (req, res) => {
+  try {
+    const bookings = await Booking.find();
+    res.json(bookings);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch bookings' });
+  }
+});
 
 module.exports = router;

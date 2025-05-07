@@ -1,7 +1,9 @@
 const Vendor = require('../models/Vendor');
 
+// Create a new vendor
 const createVendor = async (req, res) => {
   try {
+    // Create a new vendor and associate it with the logged-in user
     const vendor = await Vendor.create({ ...req.body, userId: req.user.id });
     res.status(201).json(vendor);
   } catch (error) {
@@ -9,6 +11,7 @@ const createVendor = async (req, res) => {
   }
 };
 
+// Get all vendors
 const getVendors = async (req, res) => {
   try {
     const vendors = await Vendor.find();
@@ -18,6 +21,7 @@ const getVendors = async (req, res) => {
   }
 };
 
+// Get a specific vendor by vendor ID
 const getVendorById = async (req, res) => {
   try {
     const vendor = await Vendor.findById(req.params.id);
@@ -28,6 +32,7 @@ const getVendorById = async (req, res) => {
   }
 };
 
+// Get a vendor by user ID (associated user)
 const getVendorByUserId = async (req, res) => {
   try {
     const vendor = await Vendor.findOne({ userId: req.params.userId });
@@ -38,9 +43,12 @@ const getVendorByUserId = async (req, res) => {
   }
 };
 
+// Update vendor details
 const updateVendor = async (req, res) => {
   try {
+    // Update the vendor with the provided data
     const vendor = await Vendor.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
     res.status(200).json(vendor);
   } catch (error) {
     res.status(500).json({ message: 'Error updating vendor', error });

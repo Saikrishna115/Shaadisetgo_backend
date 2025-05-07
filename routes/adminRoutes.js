@@ -1,30 +1,20 @@
 const express = require('express');
+const User = require('../models/User');
+const Vendor = require('../models/Vendor');
+const Booking = require('../models/Booking');
+
 const router = express.Router();
-const adminMiddleware = require('../middleware/adminMiddleware');
 
-// Import controllers
-const {
-  getUsers,
-  updateUserStatus,
-  getVendors,
-  updateVendorStatus,
-  getBookings,
-  updateBookingStatus
-} = require('../controllers/adminController');
-
-// Protect all routes with admin middleware
-router.use(adminMiddleware);
-
-// User management routes
-router.get('/users', getUsers);
-router.put('/users/:id/status', updateUserStatus);
-
-// Vendor management routes
-router.get('/vendors', getVendors);
-router.put('/vendors/:id/status', updateVendorStatus);
-
-// Booking management routes
-router.get('/bookings', getBookings);
-router.put('/bookings/:id/status', updateBookingStatus);
+// Get admin dashboard stats
+router.get('/stats', async (req, res) => {
+  try {
+    const users = await User.countDocuments();
+    const vendors = await Vendor.countDocuments();
+    const bookings = await Booking.countDocuments();
+    res.json({ users, vendors, bookings });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to load stats' });
+  }
+});
 
 module.exports = router;

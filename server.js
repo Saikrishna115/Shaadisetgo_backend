@@ -12,23 +12,36 @@ const bookingRoutes = require('./routes/booking');
 const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
+
+// Middleware
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(cors({
-  origin: ['http://localhost:3000', 'https://shaadisetgo-frontend.vercel.app', 'https://shaadisetgo-backend.onrender.com'],
+  origin: [
+    'http://localhost:3000',
+    'https://shaadisetgo-frontend.vercel.app',
+    'https://shaadisetgo-backend.onrender.com'
+  ],
   credentials: true
 }));
 
-// Root route handler
+// Health check route
+app.get('/health', (req, res) => {
+  res.json({ status: 'healthy' });
+});
+
+// Root route
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to ShaadiSetGo API' });
 });
+
+// API routes
 app.use('/api/auth', authRoutes);
-app.use('/api/vendor', vendorRoutes);
-app.use('/api/bookings', bookingRoutes);
 app.use('/api/vendors', vendorRoutes);
+app.use('/api/bookings', bookingRoutes);
 app.use('/api/admin', adminRoutes);
 
+// Database connection and server startup
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -37,4 +50,6 @@ mongoose.connect(process.env.MONGO_URI, {
   app.listen(process.env.PORT, () => {
     console.log(`Server running on port ${process.env.PORT}`);
   });
-}).catch(err => console.error(err));
+}).catch(err => {
+  console.error('MongoDB connection error:', err);
+});
