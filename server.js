@@ -18,6 +18,11 @@ app.use(cors({
   origin: ['http://localhost:3000', 'https://shaadisetgo-frontend.vercel.app', 'https://shaadisetgo-backend.onrender.com'],
   credentials: true
 }));
+
+// Root route handler
+app.get('/', (req, res) => {
+  res.json({ message: 'Welcome to ShaadiSetGo API' });
+});
 app.use('/api/auth', authRoutes);
 app.use('/api/vendor', vendorRoutes);
 app.use('/api/bookings', bookingRoutes);
