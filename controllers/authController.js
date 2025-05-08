@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
 const register = async (req, res) => {
-  const { name, email, password, role } = req.body;
+  const { fullName, email, password, role, phone } = req.body;
   try {
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -13,7 +13,7 @@ const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create user
-    const user = await User.create({ name, email, password: hashedPassword, role });
+    const user = await User.create({ fullName, email, password: hashedPassword, role, phone });
 
     // Generate JWT token
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
