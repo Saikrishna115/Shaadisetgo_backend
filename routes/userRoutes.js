@@ -1,3 +1,8 @@
+console.log('DEBUG TYPES:', {
+    getUserProfile: typeof getUserProfile,
+    updateUserProfile: typeof updateUserProfile,
+    deleteUserProfile: typeof deleteUserProfile
+  });
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
