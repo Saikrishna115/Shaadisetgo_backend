@@ -1,28 +1,20 @@
 const express = require('express');
 const router = express.Router();
-const { verifyToken } = require('../middleware/authMiddleware');
+const auth = require('../middleware/authMiddleware');
 
-const { 
-  createVendor, 
-  getVendors, 
-  getVendorById, 
-  updateVendor, 
-  deleteVendor,
-  getAdminVendors, 
-  updateVendorStatus 
-} = require('../controllers/vendorController');
+const {
+  createVendor,
+  getVendors,
+  getVendorById,
+  getVendorByUserId,
+  updateVendor
+} = require('../controllers/vendorController'); // ✅ Correctly imported
 
-// 🔓 Public routes
-router.get('/', getVendors);                // Get all vendors
-router.get('/:id', getVendorById);          // Get vendor by ID
-
-// 🔐 Protected vendor routes (requires login)
-router.post('/', verifyToken, createVendor);              // Create vendor
-router.put('/:id', verifyToken, updateVendor);            // Update vendor
-router.delete('/:id', verifyToken, deleteVendor);         // Delete vendor
-
-// 🔐🔐 Admin routes (can add role-check later if needed)
-router.get('/admin/vendors', verifyToken, getAdminVendors);                      // Admin: Get all vendors
-router.put('/admin/vendor-status/:id', verifyToken, updateVendorStatus);        // Admin: Update status
+// Routes
+router.post('/', auth, createVendor); // Only authenticated users can create vendors
+router.get('/', getVendors); // Public route to get all vendors
+router.get('/:id', getVendorById); // Public route to get vendor by ID
+router.get('/user/:userId', getVendorByUserId); // Public route to get vendor by user ID
+router.put('/:id', auth, updateVendor); // Only authenticated users can update vendor
 
 module.exports = router;

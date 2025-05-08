@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
 const verifyToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -26,4 +27,4 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-module.exports = verifyToken; // ✅ export as function directly
+module.exports = { verifyToken }; // ✅ export as function directly

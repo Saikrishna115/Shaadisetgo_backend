@@ -3,6 +3,7 @@ const Vendor = require('../models/Vendor');
 // Create a new vendor
 const createVendor = async (req, res) => {
   try {
+    // Create a new vendor and associate it with the logged-in user
     const vendor = await Vendor.create({ ...req.body, userId: req.user.id });
     res.status(201).json(vendor);
   } catch (error) {
@@ -31,7 +32,7 @@ const getVendorById = async (req, res) => {
   }
 };
 
-// Get a vendor by associated user ID
+// Get a vendor by user ID (associated user)
 const getVendorByUserId = async (req, res) => {
   try {
     const vendor = await Vendor.findOne({ userId: req.params.userId });
