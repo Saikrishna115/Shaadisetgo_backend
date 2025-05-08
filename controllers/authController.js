@@ -5,6 +5,13 @@ const User = require('../models/User');
 const register = async (req, res) => {
   // Set loading state
   res.locals.loading = true;
+  // Log registration attempt
+  console.log('Registration attempt:', {
+    fullName: req.body.fullName,
+    email: req.body.email,
+    role: req.body.role,
+    phone: req.body.phone
+  });
   try {
     const { fullName, email, password, role, phone } = req.body;
 
@@ -78,7 +85,7 @@ const register = async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: user._id, role: user.role },
+      { userId: user._id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '1d' }
     );
@@ -98,7 +105,11 @@ const register = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Registration Error:', error);
+    console.error('Registration Error:', {
+      error: error.message,
+      stack: error.stack,
+      requestBody: req.body
+    });
     // Clear loading state on error
     res.locals.loading = false;
     res.status(500).json({
@@ -152,7 +163,7 @@ const login = async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: user._id, role: user.role },
+      { userId: user._id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '1d' }
     );
@@ -182,7 +193,7 @@ const login = async (req, res) => {
 
 const getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password');
+    const user = await User.findById(req.user.userId).select('-password');
     res.status(200).json(user);
   } catch (error) {
     console.error('Get Profile Error:', error.message);
