@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/authMiddleware');
+const auth = require('../middleware/authMiddleware');
 const { 
     getUserProfile,
     updateUserProfile,
@@ -8,8 +8,8 @@ const {
 } = require('../controllers/userController');
 
 // User profile routes
-router.get('/profile', protect, getUserProfile);
-router.put('/profile', protect, updateUserProfile);
-router.delete('/profile', protect, deleteUserProfile);
+router.get('/profile', auth, getUserProfile);
+router.put('/profile', auth, updateUserProfile);
+router.delete('/profile', auth, deleteUserProfile);
 
 module.exports = router;
