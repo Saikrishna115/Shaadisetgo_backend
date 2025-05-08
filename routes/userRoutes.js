@@ -1,16 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/authMiddleware'); // ✅ now this is the middleware function
-
+const { verifyToken } = require('../middleware/authMiddleware');
 const {
   getUserProfile,
   updateUserProfile,
   deleteUserProfile
-} = require('../controllers/userController');
+} = require('../controllers/userController');  // Correct import
 
-// User profile routes
-router.get('/profile', auth, getUserProfile);
-router.put('/profile', auth, updateUserProfile);
-router.delete('/profile', auth, deleteUserProfile);
+// Public routes
+router.get('/profile', verifyToken, getUserProfile);
+router.put('/profile', verifyToken, updateUserProfile);
+router.delete('/profile', verifyToken, deleteUserProfile);
 
 module.exports = router;

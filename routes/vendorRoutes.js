@@ -1,20 +1,29 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/authMiddleware');
-
+const { verifyToken } = require('../middleware/authMiddleware');
 const {
   createVendor,
   getVendors,
   getVendorById,
   getVendorByUserId,
-  updateVendor
-} = require('../controllers/vendorController'); // ✅ Correctly imported
+  updateVendor,
+  deleteVendor,
+  getAdminVendors,
+  updateVendorStatus
+} = require('../controllers/vendorController');  // Correct import
 
-// Routes
-router.post('/', auth, createVendor); // Only authenticated users can create vendors
-router.get('/', getVendors); // Public route to get all vendors
-router.get('/:id', getVendorById); // Public route to get vendor by ID
-router.get('/user/:userId', getVendorByUserId); // Public route to get vendor by user ID
-router.put('/:id', auth, updateVendor); // Only authenticated users can update vendor
+// Public routes
+router.get('/', getVendors); 
+router.get('/:id', getVendorById); 
+router.get('/user/:userId', getVendorByUserId);
+
+// Protected vendor routes
+router.post('/', verifyToken, createVendor);  // Ensure createVendor is imported as a function
+router.put('/:id', verifyToken, updateVendor);
+router.delete('/:id', verifyToken, deleteVendor);
+
+// Admin routes
+router.get('/admin/vendors', verifyToken, getAdminVendors); 
+router.put('/admin/vendor-status/:id', verifyToken, updateVendorStatus);
 
 module.exports = router;

@@ -3,7 +3,6 @@ const Vendor = require('../models/Vendor');
 // Create a new vendor
 const createVendor = async (req, res) => {
   try {
-    // Create a new vendor and associate it with the logged-in user
     const vendor = await Vendor.create({ ...req.body, userId: req.user.id });
     res.status(201).json(vendor);
   } catch (error) {
@@ -54,10 +53,22 @@ const updateVendor = async (req, res) => {
   }
 };
 
+// Delete a vendor (if needed)
+const deleteVendor = async (req, res) => {
+  try {
+    const vendor = await Vendor.findByIdAndDelete(req.params.id);
+    if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
+    res.status(200).json({ message: 'Vendor deleted' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting vendor', error });
+  }
+};
+
 module.exports = {
   createVendor,
   getVendors,
   getVendorById,
   getVendorByUserId,
-  updateVendor
+  updateVendor,
+  deleteVendor
 };
