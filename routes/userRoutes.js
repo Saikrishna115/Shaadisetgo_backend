@@ -5,11 +5,13 @@ const {
     getUserProfile,
     updateUserProfile,
     deleteUserProfile
-} = require('../controllers/userController');
-
+} = (req, res) => {
+    res.send('User profile');
+};
 // User profile routes
 router.get('/profile', auth, getUserProfile);
 router.put('/profile', auth, updateUserProfile);
 router.delete('/profile', auth, deleteUserProfile);
+console.log('userController.getUserProfile:', typeof userController.getUserProfile);
 
 module.exports = router;
