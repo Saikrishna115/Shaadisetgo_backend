@@ -1,28 +1,28 @@
 const express = require('express');
+const router = express.Router();
+const { verifyToken } = require('../middleware/authMiddleware');
+
 const { 
   createVendor, 
   getVendors, 
-  getVendor, 
+  getVendorById, 
   updateVendor, 
   deleteVendor,
   getAdminVendors, 
   updateVendorStatus 
 } = require('../controllers/vendorController');
-const auth = require('../middleware/authMiddleware');
-const router = express.Router();
 
+// 🔓 Public routes
+router.get('/', getVendors);                // Get all vendors
+router.get('/:id', getVendorById);          // Get vendor by ID
 
-// Public routes
-router.get('/', getVendors);
-router.get('/:id', getVendor);
+// 🔐 Protected vendor routes (requires login)
+router.post('/', verifyToken, createVendor);              // Create vendor
+router.put('/:id', verifyToken, updateVendor);            // Update vendor
+router.delete('/:id', verifyToken, deleteVendor);         // Delete vendor
 
-// Protected vendor routes
-router.post('/', auth, createVendor);
-router.put('/:id', auth, updateVendor);
-router.delete('/:id', auth, deleteVendor);
-
-// Admin routes
-router.get('/admin/vendors', auth, getAdminVendors);
-router.put('/admin/vendor-status/:id', auth, updateVendorStatus);
+// 🔐🔐 Admin routes (can add role-check later if needed)
+router.get('/admin/vendors', verifyToken, getAdminVendors);                      // Admin: Get all vendors
+router.put('/admin/vendor-status/:id', verifyToken, updateVendorStatus);        // Admin: Update status
 
 module.exports = router;
