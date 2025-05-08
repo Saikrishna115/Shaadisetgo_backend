@@ -1,13 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
+
+// ✅ Correctly import the controller functions
 const {
   getUserProfile,
   updateUserProfile,
   deleteUserProfile
-} = require('../controllers/userController'); // ✅ FIXED
+} = require('../controllers/userController');  // <<-- Make sure this path is correct
 
-// User profile routes
+// ✅ Route definitions using controller functions
 router.get('/profile', auth, getUserProfile);
 router.put('/profile', auth, updateUserProfile);
 router.delete('/profile', auth, deleteUserProfile);
