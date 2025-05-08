@@ -10,8 +10,8 @@ dotenv.config();
 const app = express();
 
 // Middleware
-app.use(express.json());
-app.use(morgan('dev'));
+app.use(express.json());  // Allows to parse JSON requests
+app.use(morgan('dev'));   // Logging requests in development mode
 
 // CORS configuration
 const allowedOrigins = [
@@ -54,6 +54,7 @@ const userRoutes = require('./routes/userRoutes');
 const vendorRoutes = require('./routes/vendorRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
 
+// Use routes for different API endpoints
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/vendors', vendorRoutes);

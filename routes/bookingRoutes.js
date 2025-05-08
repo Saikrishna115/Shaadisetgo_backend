@@ -1,10 +1,13 @@
 const express = require('express');
-const { createBooking, getCustomerBookings, getVendorBookings } = require('../controllers/bookingController');
-const auth = require('../middleware/authMiddleware');
 const router = express.Router();
+const { createBooking, getBookings, getBookingById, updateBooking } = require('../controllers/bookingController');  // Ensure correct import
 
-router.post('/', auth, createBooking);
-router.get('/customer/:id', auth, getCustomerBookings);
-router.get('/vendor/:id', auth, getVendorBookings);
+// Public routes
+router.get('/', getBookings);  // Ensure getBookings is a valid function
+router.get('/:id', getBookingById);  // Ensure getBookingById is a valid function
+
+// Protected routes
+router.post('/', createBooking);  // Ensure createBooking is a valid function
+router.put('/:id', updateBooking);  // Ensure updateBooking is a valid function
 
 module.exports = router;
