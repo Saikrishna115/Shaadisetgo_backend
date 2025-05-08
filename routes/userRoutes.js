@@ -11,5 +11,6 @@ const {
 router.get('/profile', protect, getUserProfile);
 router.put('/profile', protect, updateUserProfile);
 router.delete('/profile', protect, deleteUserProfile);
+console.log('userController:', userController);
 
 module.exports = router;
