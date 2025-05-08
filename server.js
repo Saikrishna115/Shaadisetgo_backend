@@ -32,6 +32,11 @@ app.use(cors({
   credentials: true
 }));
 
+// Root route
+app.get('/', (req, res) => {
+  res.send('Welcome to ShaadiSetGo API');
+});
+
 // Health check route
 app.get('/health', (req, res) => {
   res.json({ status: 'healthy' });
@@ -61,7 +66,7 @@ app.use('/api/vendors', vendorRoutes);
 app.use('/api/bookings', bookingRoutes);
 
 // Start the server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
