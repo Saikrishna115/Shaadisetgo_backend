@@ -4,6 +4,18 @@ const User = require('../models/User');
 
 const register = async (req, res) => {
   const { fullName, email, password, role, phone } = req.body;
+
+  // Validate required fields
+  const requiredFields = ['fullName', 'email', 'password', 'phone'];
+  const missingFields = requiredFields.filter(field => !req.body[field]);
+  
+  if (missingFields.length > 0) {
+    return res.status(400).json({
+      message: 'Missing required fields',
+      fields: missingFields
+    });
+  }
+
   try {
     // Check if user already exists
     const existingUser = await User.findOne({ email });
