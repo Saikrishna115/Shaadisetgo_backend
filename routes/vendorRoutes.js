@@ -10,7 +10,7 @@ const {
 } = require('../controllers/vendorController');
 const auth = require('../middleware/authMiddleware');
 const router = express.Router();
-router.get('/', getAllVendors);
+
 
 // Public routes
 router.get('/', getVendors);
