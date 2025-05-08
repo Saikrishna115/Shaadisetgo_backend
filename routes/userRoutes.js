@@ -1,8 +1,3 @@
-console.log('DEBUG TYPES:', {
-    getUserProfile: typeof getUserProfile,
-    updateUserProfile: typeof updateUserProfile,
-    deleteUserProfile: typeof deleteUserProfile
-  });
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
@@ -13,6 +8,13 @@ const {
   updateUserProfile,
   deleteUserProfile
 } = require('../controllers/userController');  // <<-- Make sure this path is correct
+
+// ✅ Debug their types after import
+console.log('DEBUG TYPES:', {
+  getUserProfile: typeof getUserProfile,
+  updateUserProfile: typeof updateUserProfile,
+  deleteUserProfile: typeof deleteUserProfile
+});
 
 // ✅ Route definitions using controller functions
 router.get('/profile', auth, getUserProfile);
