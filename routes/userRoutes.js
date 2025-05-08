@@ -1,22 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/authMiddleware');
+const auth = require('../middleware/authMiddleware'); // ✅ now this is the middleware function
 
-// ✅ Correctly import the controller functions
 const {
   getUserProfile,
   updateUserProfile,
   deleteUserProfile
-} = require('../controllers/userController');  // <<-- Make sure this path is correct
+} = require('../controllers/userController');
 
-// ✅ Debug their types after import
-console.log('DEBUG TYPES:', {
-  getUserProfile: typeof getUserProfile,
-  updateUserProfile: typeof updateUserProfile,
-  deleteUserProfile: typeof deleteUserProfile
-});
-
-// ✅ Route definitions using controller functions
+// User profile routes
 router.get('/profile', auth, getUserProfile);
 router.put('/profile', auth, updateUserProfile);
 router.delete('/profile', auth, deleteUserProfile);

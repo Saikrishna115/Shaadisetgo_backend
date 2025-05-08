@@ -1,9 +1,5 @@
 const jwt = require('jsonwebtoken');
 
-/**
- * Middleware to verify a valid JWT token from Authorization header.
- * Adds `req.user = decoded` if successful.
- */
 const verifyToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
@@ -17,7 +13,7 @@ const verifyToken = (req, res, next) => {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    req.user = decoded; // Should contain at least { userId, role }
+    req.user = decoded;
     next();
   } catch (err) {
     return res.status(401).json({
@@ -30,4 +26,4 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-module.exports = { verifyToken };
+module.exports = verifyToken; // ✅ export as function directly
