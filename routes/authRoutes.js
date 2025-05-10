@@ -1,21 +1,21 @@
 const express = require('express');
 const { register, login, getProfile } = require('../controllers/authController');
 const { verifyToken } = require('../middleware/authMiddleware');
+
 const router = express.Router();
-router.get('/me', authMiddleware, async (req, res) => {
-    try {
-      // req.user should be set in your middleware
-      res.json(req.user);
-    } catch (error) {
-      res.status(500).json({ message: 'Server error' });
-    }
-  });
-  router.post('/logout', (req, res) => {
-    // No server-side action needed if you're using JWT
-    res.status(200).json({ message: 'Logged out' });
-  });  
+
+// Register
 router.post('/register', register);
+
+// Login
 router.post('/login', login);
+
+// Logout (Client just deletes token)
+router.post('/logout', (req, res) => {
+  res.status(200).json({ message: 'Logged out' });
+});
+
+// Get current user profile
 router.get('/me', verifyToken, getProfile);
 
 module.exports = router;
