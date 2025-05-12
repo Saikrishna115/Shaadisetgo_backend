@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middleware/authMiddleware');
+const Vendor = require('../models/Vendor');
 const {
   createVendor,
   getVendors,
@@ -12,10 +13,24 @@ const {
   updateVendorStatus
 } = require('../controllers/vendorController');  // Ensure correct import
 
+// Vendor profile route
+router.get('/profile', verifyToken, async (req, res) => {
+  try {
+    const vendor = await Vendor.findOne({ userId: req.user.id });
+    if (!vendor) {
+      return res.status(404).json({ message: 'Vendor profile not found' });
+    }
+    res.status(200).json(vendor);
+  } catch (error) {
+    console.error('Error fetching vendor profile:', error);
+    res.status(500).json({ message: 'Error fetching vendor profile', error: error.message });
+  }
+});
+
 // Public routes
-router.get('/', getVendors); // Ensure getVendors function exists and is imported correctly
-router.get('/:id', getVendorById);  // Ensure getVendorById function exists and is imported correctly
-router.get('/user/:userId', getVendorByUserId); // Ensure getVendorByUserId function exists and is imported correctly
+router.get('/', getVendors);
+router.get('/user/:userId', getVendorByUserId);
+router.get('/:id', getVendorById);
 
 // Protected vendor routes
 router.post('/', verifyToken, createVendor);  // Ensure createVendor is correctly imported
