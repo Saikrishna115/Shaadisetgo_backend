@@ -16,10 +16,19 @@ const {
 // Vendor profile route
 router.get('/profile', verifyToken, async (req, res) => {
   try {
-    const vendor = await Vendor.findOne({ userId: req.user.id });
-    if (!vendor) {
-      return res.status(404).json({ message: 'Vendor profile not found' });
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ message: 'User not authenticated' });
     }
+
+    const vendor = await Vendor.findOne({ userId: req.user.id }).populate('userId', 'fullName email role');
+    if (!vendor) {
+      return res.status(404).json({ message: 'Vendor profile not found. Please create a vendor profile first.' });
+    }
+
+    if (vendor.userId.role !== 'vendor') {
+      return res.status(403).json({ message: 'Access denied. User is not a vendor.' });
+    }
+
     res.status(200).json(vendor);
   } catch (error) {
     console.error('Error fetching vendor profile:', error);
