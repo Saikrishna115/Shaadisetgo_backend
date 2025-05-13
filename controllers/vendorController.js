@@ -3,10 +3,38 @@ const Vendor = require('../models/Vendor');
 // Create a new vendor
 const createVendor = async (req, res) => {
   try {
-    const vendor = await Vendor.create({ ...req.body, userId: req.user.id });
+    // Check if vendor profile already exists for this user
+    const existingVendor = await Vendor.findOne({ userId: req.user.id });
+    if (existingVendor) {
+      return res.status(400).json({ message: 'Vendor profile already exists for this user' });
+    }
+
+    // Validate required fields
+    const requiredFields = ['businessName', 'ownerName', 'email', 'phone', 'location', 'serviceCategory'];
+    const missingFields = requiredFields.filter(field => !req.body[field]);
+    
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        message: 'Missing required fields',
+        fields: missingFields
+      });
+    }
+
+    // Create vendor profile
+    const vendor = await Vendor.create({
+      ...req.body,
+      userId: req.user.id,
+      email: req.body.email || req.user.email, // Use user email if not provided
+      isActive: true
+    });
+
     res.status(201).json(vendor);
   } catch (error) {
-    res.status(500).json({ message: 'Error creating vendor', error });
+    console.error('Error creating vendor profile:', error);
+    if (error.code === 11000) { // Duplicate key error
+      return res.status(400).json({ message: 'Email already registered as vendor' });
+    }
+    res.status(500).json({ message: 'Error creating vendor profile', error: error.message });
   }
 };
 
