@@ -28,7 +28,8 @@ router.get('/profile', verifyToken, async (req, res) => {
 
     const vendor = await Vendor.findOne({ userId: req.user.id }).populate('userId', 'fullName email role');
     if (!vendor) {
-      return res.status(404).json({ message: 'Vendor profile not found. Please create a vendor profile first.' });
+      // Return null instead of 404 for non-existent vendor profiles
+      return res.status(200).json(null);
     }
 
     if (vendor.userId.role !== 'vendor') {
