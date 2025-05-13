@@ -17,7 +17,13 @@ const {
 router.get('/profile', verifyToken, async (req, res) => {
   try {
     if (!req.user || !req.user.id) {
-      return res.status(401).json({ message: 'User not authenticated' });
+      return res.status(401).json({ message: 'Authentication failed. Please login again.' });
+    }
+
+    // First check if the user exists and has the vendor role
+    const user = await User.findById(req.user.id).select('role');
+    if (!user || user.role !== 'vendor') {
+      return res.status(403).json({ message: 'Access denied. User is not authorized as a vendor.' });
     }
 
     const vendor = await Vendor.findOne({ userId: req.user.id }).populate('userId', 'fullName email role');

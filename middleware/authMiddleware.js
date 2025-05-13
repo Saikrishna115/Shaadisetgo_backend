@@ -4,25 +4,40 @@ const User = require('../models/User');
 const verifyToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (!authHeader) {
     return res.status(401).json({
-      message: 'No token provided or invalid format. Please use Bearer token.'
+      message: 'No authorization header found. Please provide a token.'
+    });
+  }
+
+  if (!authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      message: 'Invalid token format. Please use Bearer token format.'
     });
   }
 
   try {
     const token = authHeader.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({
+        message: 'No token found in authorization header.'
+      });
+    }
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (!decoded.id) {
+      return res.status(401).json({
+        message: 'Invalid token payload. User ID not found.'
+      });
+    }
 
     req.user = decoded;
     next();
   } catch (err) {
+    console.error('Token verification error:', err);
     return res.status(401).json({
-      message: 'Invalid or expired token',
-      error:
-        err.name === 'TokenExpiredError'
-          ? 'Token has expired'
-          : 'Token validation failed'
+      message: 'Authentication failed',
+      error: err.name === 'TokenExpiredError' ? 'Token has expired. Please login again.' : 'Invalid token. Please login again.'
     });
   }
 };
