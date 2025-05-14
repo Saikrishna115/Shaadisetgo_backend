@@ -19,6 +19,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   'https://shaadisetgo-frontend.vercel.app',
 ];
+
 const corsOptions = {
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
@@ -33,7 +34,8 @@ const corsOptions = {
     'Content-Type',
     'Authorization',
     'Cache-Control',
-    'Pragma'  // Ensure 'Pragma' is allowed in headers
+    'Pragma',     // Include 'Pragma' header
+    'Expires'     // Include 'Expires' header
   ]
 };
 
