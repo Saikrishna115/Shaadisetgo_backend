@@ -69,7 +69,7 @@ mongoose.connect(process.env.MONGO_URI, {
 });
 
 // Routes
-const authRoutes = require('./routes/authRoutes');
+app.use('/api/auth', require('./routes/authRoutes'));
 const userRoutes = require('./routes/userRoutes');
 const vendorRoutes = require('./routes/vendorRoutes');
 const bookingRoutes = require('./routes/booking');
