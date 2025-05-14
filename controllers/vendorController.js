@@ -1,53 +1,43 @@
 const Vendor = require('../models/Vendor');
-
 const User = require('../models/User');
 
 // Create a new vendor
 const createVendor = async (req, res) => {
   try {
-    // Find user by email
-    const user = await User.findOne({ email: req.body.email });
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+
     if (!user) {
-      return res.status(404).json({ message: 'User not found with this email' });
+      return res.status(404).json({ message: 'User not found' });
     }
 
-    // Check if vendor profile already exists for this user
-    const existingVendor = await Vendor.findOne({ userId: user._id });
+    const existingVendor = await Vendor.findOne({ userId });
     if (existingVendor) {
-      return res.status(400).json({ message: 'Vendor profile already exists for this user' });
+      return res.status(400).json({ message: 'Vendor profile already exists' });
     }
 
-    // Validate required fields
-    const requiredFields = ['businessName', 'ownerName', 'email', 'phone', 'location', 'serviceCategory'];
+    const requiredFields = ['businessName', 'ownerName', 'phone', 'location', 'serviceCategory'];
     const missingFields = requiredFields.filter(field => !req.body[field]);
-    
     if (missingFields.length > 0) {
-      return res.status(400).json({
-        message: 'Missing required fields',
-        fields: missingFields
-      });
+      return res.status(400).json({ message: 'Missing required fields', fields: missingFields });
     }
 
-    // Create vendor profile
     const vendor = await Vendor.create({
       ...req.body,
-      userId: user._id,
+      userId,
       email: user.email,
       isActive: true
     });
 
-    // Update user role to vendor
-    await User.findByIdAndUpdate(user._id, { role: 'vendor' });
+    await User.findByIdAndUpdate(userId, { role: 'vendor' });
 
     res.status(201).json(vendor);
   } catch (error) {
     console.error('Error creating vendor profile:', error);
-    if (error.code === 11000) { // Duplicate key error
-      return res.status(400).json({ message: 'Email already registered as vendor' });
-    }
     res.status(500).json({ message: 'Error creating vendor profile', error: error.message });
   }
 };
+
 
 // Get all vendors
 const getVendors = async (req, res) => {
