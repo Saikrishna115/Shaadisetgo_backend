@@ -38,6 +38,11 @@ const corsOptions = {
     'Expires'     // Include 'Expires' header
   ]
 };
+app.use(cors({
+  origin: 'https://shaadisetgo-frontend.vercel.app',
+  credentials: true // if you’re sending cookies or auth headers
+}));
+app.use(express.json());
 
 // Apply CORS middleware globally
 app.use(cors(corsOptions));
