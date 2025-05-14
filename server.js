@@ -6,14 +6,22 @@ const dotenv = require('dotenv');
 const authRoutes = require('./routes/authRoutes');
 
 // Load environment variables from .env file
-dotenv.config();
+require('dotenv'). config();
 
 const app = express();
 
 // Middleware
-app.use(express.json());  // Allows to parse JSON requests
-app.use(morgan('dev'));   // Logging requests in development mode
 
+app.use(morgan('dev'));   // Logging requests in development mode
+app.use(
+  cors({
+    origin: 'https://shaadisetgo-frontend.vercel.app',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+  })
+);
+app.use(express.json());  // Allows to parse JSON requests
 // CORS configuration
 const allowedOrigins = [
   'http://localhost:3000',
