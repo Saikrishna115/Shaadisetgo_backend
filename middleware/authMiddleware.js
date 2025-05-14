@@ -25,21 +25,25 @@ const verifyToken = (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (!decoded.userId) {
+    
+    // ✅ FIX: match the key used in generateToken
+    if (!decoded.id) {
       return res.status(401).json({
         message: 'Invalid token payload. User ID not found.'
       });
     }
 
-    req.user = { id: decoded.userId };
+    req.user = { id: decoded.id }; // ✅ Use 'id' instead of 'userId'
     next();
   } catch (err) {
     console.error('Token verification error:', err);
     return res.status(401).json({
       message: 'Authentication failed',
-      error: err.name === 'TokenExpiredError' ? 'Token has expired. Please login again.' : 'Invalid token. Please login again.'
+      error: err.name === 'TokenExpiredError'
+        ? 'Token has expired. Please login again.'
+        : 'Invalid token. Please login again.'
     });
   }
 };
 
-module.exports = { verifyToken }; // ✅ export as function directly
+module.exports = { verifyToken };
