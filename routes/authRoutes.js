@@ -2,58 +2,39 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const { verifyToken } = require('../middleware/authMiddleware');
+const { register, login } = require('../controllers/authController');
 
 // Register
-router.post('/register', async (req, res) => {
-  try {
-    const { name, email, password, role } = req.body;
-
-    const existingUser = await User.findOne({ email });
-    if (existingUser) return res.status(400).json({ message: 'User already exists' });
-
-    const user = new User({ name, email, password, role });
-    await user.save();
-
-    res.status(201).json({ message: 'User registered successfully' });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.post('/register', register);
 
 // Login
-router.post('/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    const user = await User.findOne({ email });
-    if (!user || !(await user.comparePassword(password))) {
-      return res.status(401).json({ message: 'Invalid email or password' });
-    }
-
-    const token = user.generateToken();
-    const { _id, name, role } = user;
-
-    res.json({ token, user: { _id, name, email, role } });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.post('/login', login);
 
 // Logout
 router.post('/logout', (req, res) => {
-  res.status(200).json({ message: 'Logged out' });
+  res.status(200).json({ message: 'Logged out successfully' });
 });
 
 // Get current user profile
-router.get('/me', verifyToken, async (req, res) => {
+router.get('/user', verifyToken, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password');
-    if (!user) return res.status(404).json({ message: 'User not found' });
-
-    res.json(user);
+    const user = await User.findById(req.user.userId).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json({
+      id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      role: user.role,
+      phone: user.phone
+    });
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('Get user profile error:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
+
+module.exports = router;
 
 module.exports = router;
