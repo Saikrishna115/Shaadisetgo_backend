@@ -1,12 +1,13 @@
+// controllers/bookingController.js
 const Booking = require('../models/Booking');
 
-// Create a new booking
+// Create a booking
 const createBooking = async (req, res) => {
   try {
-    const booking = await Booking.create(req.body);  // Example: Adjust the schema as needed
+    const booking = await Booking.create(req.body);
     res.status(201).json(booking);
-  } catch (error) {
-    res.status(500).json({ message: 'Error creating booking', error });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create booking' });
   }
 };
 
@@ -14,32 +15,41 @@ const createBooking = async (req, res) => {
 const getBookings = async (req, res) => {
   try {
     const bookings = await Booking.find();
-    res.status(200).json(bookings);
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching bookings', error });
+    res.json(bookings);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch bookings' });
   }
 };
 
-// Get a specific booking by booking ID
+// Get booking by ID
 const getBookingById = async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id);
-    if (!booking) return res.status(404).json({ message: 'Booking not found' });
-    res.status(200).json(booking);
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching booking', error });
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+    res.json(booking);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch booking' });
   }
 };
 
-// Update booking details
+// Update booking
 const updateBooking = async (req, res) => {
   try {
     const booking = await Booking.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!booking) return res.status(404).json({ message: 'Booking not found' });
-    res.status(200).json(booking);
-  } catch (error) {
-    res.status(500).json({ message: 'Error updating booking', error });
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+    res.json(booking);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update booking' });
   }
 };
 
-module.exports = { createBooking, getBookings, getBookingById, updateBooking };
+module.exports = {
+  createBooking,
+  getBookings,
+  getBookingById,
+  updateBooking
+};
