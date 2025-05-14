@@ -25,13 +25,13 @@ const verifyToken = (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (!decoded.id) {
+    if (!decoded.userId) {
       return res.status(401).json({
         message: 'Invalid token payload. User ID not found.'
       });
     }
 
-    req.user = decoded;
+    req.user = { id: decoded.userId };
     next();
   } catch (err) {
     console.error('Token verification error:', err);
