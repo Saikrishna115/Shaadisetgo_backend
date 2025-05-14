@@ -1,10 +1,18 @@
 const Vendor = require('../models/Vendor');
 
+const User = require('../models/User');
+
 // Create a new vendor
 const createVendor = async (req, res) => {
   try {
+    // Find user by email
+    const user = await User.findOne({ email: req.body.email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found with this email' });
+    }
+
     // Check if vendor profile already exists for this user
-    const existingVendor = await Vendor.findOne({ userId: req.user.id });
+    const existingVendor = await Vendor.findOne({ userId: user._id });
     if (existingVendor) {
       return res.status(400).json({ message: 'Vendor profile already exists for this user' });
     }
@@ -23,10 +31,13 @@ const createVendor = async (req, res) => {
     // Create vendor profile
     const vendor = await Vendor.create({
       ...req.body,
-      userId: req.user.id,
-      email: req.body.email || req.user.email, // Use user email if not provided
+      userId: user._id,
+      email: user.email,
       isActive: true
     });
+
+    // Update user role to vendor
+    await User.findByIdAndUpdate(user._id, { role: 'vendor' });
 
     res.status(201).json(vendor);
   } catch (error) {
@@ -73,11 +84,42 @@ const getVendorByUserId = async (req, res) => {
 // Update vendor details
 const updateVendor = async (req, res) => {
   try {
-    const vendor = await Vendor.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
+    // First check if the vendor exists
+    const existingVendor = await Vendor.findById(req.params.id);
+    if (!existingVendor) {
+      return res.status(404).json({ message: 'Vendor not found' });
+    }
+
+    // Verify user has permission to update this vendor
+    if (existingVendor.userId.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Not authorized to update this vendor profile' });
+    }
+
+    // Validate the update data
+    const updateData = { ...req.body };
+    delete updateData.userId; // Prevent userId from being modified
+    delete updateData.isActive; // Prevent isActive from being modified directly
+
+    // Update the vendor with validated data
+    const vendor = await Vendor.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
     res.status(200).json(vendor);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating vendor', error });
+    console.error('Error updating vendor profile:', error);
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        message: 'Invalid vendor data',
+        errors: Object.values(error.errors).map(err => err.message)
+      });
+    }
+    if (error.code === 11000) {
+      return res.status(400).json({ message: 'Email already exists' });
+    }
+    res.status(500).json({ message: 'Failed to update vendor profile', error: error.message });
   }
 };
 

@@ -39,8 +39,10 @@ router.get('/', getVendors);
 router.get('/user/:userId', getVendorByUserId);
 router.get('/:id', getVendorById);
 
-// Protected vendor routes
-router.post('/', verifyToken, createVendor);  // Ensure createVendor is correctly imported
+// Vendor profile creation - accessible during signup
+router.post('/', createVendor);
+
+// Protected vendor routes - require authentication
 router.put('/:id', verifyToken, updateVendor);
 router.delete('/:id', verifyToken, deleteVendor);
 
