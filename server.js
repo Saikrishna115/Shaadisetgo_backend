@@ -32,28 +32,13 @@ const corsOptions = {
   allowedHeaders: [
     'Content-Type',
     'Authorization',
-    'Cache-Control'
+    'Cache-Control',
+    'Pragma'  // Ensure 'Pragma' is allowed in headers
   ]
 };
+
+// Apply CORS middleware globally
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
-app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, Postman or curl requests)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
-  exposedHeaders: ['Content-Length', 'X-Content-Type-Options'],
-  credentials: true,
-  preflightContinue: false,
-  optionsSuccessStatus: 204
-}));
 
 // Root route
 app.get('/', (req, res) => {
