@@ -9,7 +9,8 @@ const {
   updateVendor,
   deleteVendor,
   getAdminVendors,
-  updateVendorStatus
+  updateVendorStatus,
+  getVendorProfile
 } = require('../controllers/vendorController');
 
 router.get('/', getVendors);
