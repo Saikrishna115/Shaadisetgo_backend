@@ -2,16 +2,19 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-const register = async (req, res) => {
-  // Set loading state
-  res.locals.loading = true;
-  // Log registration attempt
-  console.log('Registration attempt:', {
-    fullName: req.body.fullName,
-    email: req.body.email,
-    role: req.body.role,
-    phone: req.body.phone
-  });
+// Generate JWT token with secure settings
+const generateToken = (userId) => {
+  return jwt.sign(
+    { userId },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: process.env.JWT_EXPIRES_IN || '1h',
+      algorithm: 'HS256'
+    }
+  );
+};
+
+const register = async (req, res, next) => {
   try {
     const { fullName, email, password, role, phone } = req.body;
 
@@ -36,11 +39,21 @@ const register = async (req, res) => {
       });
     }
 
-    // Validate password strength
-    if (password.length < 6) {
+    // Enhanced password validation
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(password)) {
       return res.status(400).json({
         success: false,
-        message: 'Password must be at least 6 characters long'
+        message: 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character'
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'User with this email already exists'
       });
     }
 
@@ -49,9 +62,51 @@ const register = async (req, res) => {
     if (!phoneRegex.test(phone)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid phone number format. Must be 10 digits'
+        message: 'Invalid phone number format'
       });
     }
+
+    // Hash password with strong salt
+    const salt = await bcrypt.genSalt(12);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Create new user with hashed password
+    const user = await User.create({
+      fullName,
+      email,
+      password: hashedPassword,
+      role: role || 'user',
+      phone
+    });
+
+    // Generate JWT token
+    const token = generateToken(user._id);
+
+    // Set secure cookie if in production
+    if (process.env.NODE_ENV === 'production') {
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'strict',
+        maxAge: 3600000 // 1 hour
+      });
+    }
+
+    // Return success response without sensitive data
+    res.status(201).json({
+      success: true,
+      message: 'User registered successfully',
+      data: {
+        user: {
+          id: user._id,
+          fullName: user.fullName,
+          email: user.email,
+          role: user.role,
+          phone: user.phone
+        },
+        token
+      }
+    });
 
     // Validate role
     const validRoles = ['customer', 'vendor'];
@@ -110,19 +165,11 @@ const register = async (req, res) => {
       stack: error.stack,
       requestBody: req.body
     });
-    // Clear loading state on error
-    res.locals.loading = false;
-    res.status(500).json({
-      success: false,
-      message: 'Registration failed',
-      error: error.message
-    });
+    next(error);
   }
 };
 
-const login = async (req, res) => {
-  // Set loading state
-  res.locals.loading = true;
+const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
@@ -130,7 +177,7 @@ const login = async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Email and password are required'
+        message: 'Please provide both email and password'
       });
     }
 
@@ -182,26 +229,16 @@ const login = async (req, res) => {
       }
     })
   } catch (error) {
-    console.error('Login Error:', error.message);
-    // Clear loading state on error
-    res.locals.loading = false;
-    // Clear loading state on error
-    res.locals.loading = false;
-    res.status(500).json({ message: 'Server error', error: error.message });
+    next(error);
   }
 };
 
-const getProfile = async (req, res) => {
+const getProfile = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.userId).select('-password');
     res.status(200).json(user);
   } catch (error) {
-    console.error('Get Profile Error:', error.message);
-    // Clear loading state on error
-    res.locals.loading = false;
-    // Clear loading state on error
-    res.locals.loading = false;
-    res.status(500).json({ message: 'Server error', error: error.message });
+    next(error);
   }
 };
 

@@ -1,35 +1,64 @@
 const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
-const verifyToken = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader) {
-    return res.status(401).json({
-      message: 'No authorization header found. Please provide a token.'
-    });
-  }
-
-  if (!authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({
-      message: 'Invalid token format. Please use Bearer token format.'
-    });
-  }
-
+/**
+ * Middleware to verify JWT token and attach user to request
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ */
+const verifyToken = async (req, res, next) => {
   try {
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Check for token in Authorization header or secure cookie
+    let token = null;
+    const authHeader = req.headers.authorization;
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    } else if (req.cookies && req.cookies.token) {
+      token = req.cookies.token;
+    }
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required. Please provide a valid token.'
+      });
+    }
+
+    // Verify token with strong secret from environment variables
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, {
+      algorithms: ['HS256'], // Explicitly specify the algorithm
+      maxAge: process.env.JWT_EXPIRES_IN || '1h' // Token expiration
+    });
+
     if (!decoded.userId) {
       return res.status(401).json({
+        success: false,
         message: 'Invalid token payload. User ID not found.'
       });
     }
 
-    req.user = { id: decoded.userId };
+    // Fetch user from database to ensure they still exist and are active
+    const user = await User.findById(decoded.userId).select('-password');
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not found or deactivated.'
+      });
+    }
+
+    // Attach user object to request for use in subsequent middleware/routes
+    req.user = user;
     next();
   } catch (err) {
+    console.error('Auth Middleware Error:', err);
     return res.status(401).json({
+      success: false,
       message: 'Authentication failed',
-      error: err.name === 'TokenExpiredError' ? 'Token has expired. Please login again.' : 'Invalid token. Please login again.'
+      error: err.name === 'TokenExpiredError' 
+        ? 'Token has expired. Please login again.' 
+        : 'Invalid token. Please login again.'
     });
   }
 };
