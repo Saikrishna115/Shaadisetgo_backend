@@ -117,15 +117,7 @@ const register = async (req, res, next) => {
       });
     }
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email already registered'
-      });
-    }
-
+    
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
