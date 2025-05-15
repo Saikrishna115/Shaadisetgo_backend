@@ -3,12 +3,12 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
 // Generate JWT token with secure settings
-const generateToken = (userId) => {
+const generateToken = (userId, role) => {
   return jwt.sign(
-    { userId },
+    { userId, role },
     process.env.JWT_SECRET,
     {
-      expiresIn: process.env.JWT_EXPIRES_IN || '1h',
+      expiresIn: process.env.JWT_EXPIRES_IN || '1d',
       algorithm: 'HS256'
     }
   );
@@ -21,7 +21,6 @@ const register = async (req, res, next) => {
     // Validate required fields
     const requiredFields = ['fullName', 'email', 'password', 'phone'];
     const missingFields = requiredFields.filter(field => !req.body[field]);
-    
     if (missingFields.length > 0) {
       return res.status(400).json({
         success: false,
@@ -39,7 +38,7 @@ const register = async (req, res, next) => {
       });
     }
 
-    // Enhanced password validation
+    // Validate password strength
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     if (!passwordRegex.test(password)) {
       return res.status(400).json({
@@ -66,33 +65,31 @@ const register = async (req, res, next) => {
       });
     }
 
-    // Hash password with strong salt
+    // Validate role
+    const validRoles = ['customer', 'vendor'];
+    if (role && !validRoles.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid role. Must be either "customer" or "vendor"'
+      });
+    }
+
+    // Hash password
     const salt = await bcrypt.genSalt(12);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create new user with hashed password
+    // Create new user
     const user = await User.create({
       fullName,
       email,
       password: hashedPassword,
-      role: role || 'user',
+      role: role || 'customer',
       phone
     });
 
-    // Generate JWT token
-    const token = generateToken(user._id);
+    // Generate token
+    const token = generateToken(user._id, user.role);
 
-    // Set secure cookie if in production
-    if (process.env.NODE_ENV === 'production') {
-      res.cookie('token', token, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'strict',
-        maxAge: 3600000 // 1 hour
-      });
-    }
-
-    // Return success response without sensitive data
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
@@ -105,50 +102,6 @@ const register = async (req, res, next) => {
           phone: user.phone
         },
         token
-      }
-    });
-
-    // Validate role
-    const validRoles = ['customer', 'vendor'];
-    if (role && !validRoles.includes(role)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid role. Must be either "customer" or "vendor"'
-      });
-    }
-
-    
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create user with validated role
-    const user = await User.create({
-      fullName,
-      email,
-      password: hashedPassword,
-      role: role || 'customer', // Default to customer if role not specified
-      phone
-    });
-
-    // Generate JWT token
-    const token = jwt.sign(
-      { userId: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '1d' }
-    );
-
-    // Clear loading state
-    res.locals.loading = false;
-    res.status(201).json({
-      success: true,
-      message: 'Registration successful',
-      token,
-      user: {
-        id: user._id,
-        fullName: user.fullName,
-        email: user.email,
-        role: user.role,
-        phone: user.phone
       }
     });
   } catch (error) {
@@ -165,7 +118,6 @@ const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    // Validate required fields
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -173,7 +125,6 @@ const login = async (req, res, next) => {
       });
     }
 
-    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({
@@ -182,7 +133,6 @@ const login = async (req, res, next) => {
       });
     }
 
-    // Find user by email
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({
@@ -191,7 +141,6 @@ const login = async (req, res, next) => {
       });
     }
 
-    // Compare passwords
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({
@@ -200,15 +149,8 @@ const login = async (req, res, next) => {
       });
     }
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { userId: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '1d' }
-    );
+    const token = generateToken(user._id, user.role);
 
-    // Clear loading state
-    res.locals.loading = false;
     res.status(200).json({
       success: true,
       message: 'Login successful',
@@ -217,9 +159,10 @@ const login = async (req, res, next) => {
         id: user._id,
         fullName: user.fullName,
         email: user.email,
-        role: user.role
+        role: user.role,
+        phone: user.phone
       }
-    })
+    });
   } catch (error) {
     next(error);
   }
