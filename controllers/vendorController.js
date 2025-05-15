@@ -149,6 +149,26 @@ const updateVendorStatus = async (req, res) => {
   }
 };
 
+// Get vendor profile for logged in user
+const getVendorProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const vendor = await Vendor.findOne({ userId });
+    
+    if (!vendor) {
+      return res.status(404).json({ message: 'Vendor profile not found' });
+    }
+
+    res.status(200).json(vendor);
+  } catch (error) {
+    console.error('Error fetching vendor profile:', error);
+    res.status(500).json({ 
+      message: 'Error fetching vendor profile',
+      error: error.message 
+    });
+  }
+};
+
 module.exports = {
   createVendor,
   getVendors,
@@ -157,5 +177,6 @@ module.exports = {
   updateVendor,
   deleteVendor,
   getAdminVendors,
-  updateVendorStatus
+  updateVendorStatus,
+  getVendorProfile
 };

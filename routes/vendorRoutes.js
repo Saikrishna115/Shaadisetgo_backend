@@ -13,6 +13,7 @@ const {
 } = require('../controllers/vendorController');
 
 router.get('/', getVendors);
+router.get('/profile', verifyToken, getVendorProfile);
 router.get('/user/:userId', getVendorByUserId);
 router.get('/:id', getVendorById);
 
