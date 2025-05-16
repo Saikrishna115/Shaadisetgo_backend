@@ -3,19 +3,28 @@ const mongoose = require('mongoose');
 // Database connection configuration with performance optimizations
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
+    // Check for both possible environment variable names
+    const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+
+    if (!mongoUri) {
+      throw new Error('MongoDB connection string not found. Please set MONGODB_URI or MONGO_URI in environment variables.');
+    }
+
+    console.log('Attempting to connect to MongoDB...');
+
+    const conn = await mongoose.connect(mongoUri, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
       // Connection pool settings
-      maxPoolSize: 100, // Maximum number of connections in the pool
-      minPoolSize: 5,   // Minimum number of connections in the pool
-      socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-      family: 4,        // Use IPv4, skip trying IPv6
-      serverSelectionTimeoutMS: 5000, // Timeout after 5 seconds of selection retries
-      heartbeatFrequencyMS: 10000,    // Check connection health every 10 seconds
+      maxPoolSize: 100,
+      minPoolSize: 5,
+      socketTimeoutMS: 45000,
+      family: 4,
+      serverSelectionTimeoutMS: 5000,
+      heartbeatFrequencyMS: 10000,
       // Read/Write concern settings
-      w: 'majority',    // Write concern - wait for majority of nodes
-      readPreference: 'primaryPreferred', // Read from primary if available
+      w: 'majority',
+      readPreference: 'primaryPreferred',
       // Performance monitoring
       monitorCommands: true
     });
@@ -29,7 +38,11 @@ const connectDB = async () => {
 
     // Handle connection errors
     mongoose.connection.on('error', (err) => {
-      console.error('MongoDB connection error:', err);
+      console.error('MongoDB connection error:', {
+        message: err.message,
+        stack: err.stack,
+        code: err.code
+      });
     });
 
     // Handle disconnection
@@ -50,8 +63,12 @@ const connectDB = async () => {
     });
 
   } catch (error) {
-    console.error('MongoDB connection error:', error);
-    process.exit(1);
+    console.error('MongoDB connection error:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code
+    });
+    throw error; // Re-throw to be handled by the caller
   }
 };
 
