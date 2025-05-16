@@ -22,19 +22,40 @@ const createVendor = async (req, res) => {
       return res.status(400).json({ message: 'Missing required fields', fields: missingFields });
     }
 
+    // Create vendor profile with all required fields
     const vendor = await Vendor.create({
       ...req.body,
       userId,
       email: user.email,
-      isActive: true
+      isActive: true,
+      isVerified: false, // Vendors need to be verified by admin
+      rating: {
+        average: 0,
+        count: 0
+      },
+      priceRange: {
+        min: 0,
+        max: 0
+      }
     });
 
-    await User.findByIdAndUpdate(userId, { role: 'vendor' });
+    // Update user role to vendor if not already set
+    if (user.role !== 'vendor') {
+      await User.findByIdAndUpdate(userId, { role: 'vendor' });
+    }
 
-    res.status(201).json(vendor);
+    res.status(201).json({
+      success: true,
+      message: 'Vendor profile created successfully',
+      vendor
+    });
   } catch (error) {
     console.error('Error creating vendor profile:', error);
-    res.status(500).json({ message: 'Error creating vendor profile', error: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: 'Error creating vendor profile', 
+      error: error.message 
+    });
   }
 };
 

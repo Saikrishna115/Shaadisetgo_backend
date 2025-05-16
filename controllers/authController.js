@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Vendor = require('../models/Vendor');
 
 // Generate JWT token with secure settings
 const generateToken = (userId, role) => {
@@ -133,6 +134,7 @@ const login = async (req, res, next) => {
       });
     }
 
+    // Find user and check if they exist
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({
@@ -141,6 +143,7 @@ const login = async (req, res, next) => {
       });
     }
 
+    // Verify password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({
@@ -149,6 +152,25 @@ const login = async (req, res, next) => {
       });
     }
 
+    // If user is a vendor, check if they have a vendor profile
+    if (user.role === 'vendor') {
+      const vendorProfile = await Vendor.findOne({ userId: user._id });
+      if (!vendorProfile) {
+        return res.status(400).json({
+          success: false,
+          message: 'Vendor profile not found. Please complete your profile setup.'
+        });
+      }
+
+      if (!vendorProfile.isActive) {
+        return res.status(400).json({
+          success: false,
+          message: 'Your vendor account is currently inactive. Please contact support.'
+        });
+      }
+    }
+
+    // Generate token and send response
     const token = generateToken(user._id, user.role);
 
     res.status(200).json({
@@ -164,6 +186,7 @@ const login = async (req, res, next) => {
       }
     });
   } catch (error) {
+    console.error('Login error:', error);
     next(error);
   }
 };
