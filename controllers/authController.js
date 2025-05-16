@@ -147,7 +147,9 @@ const login = async (req, res, next) => {
       exists: !!user, 
       email,
       role: user?.role,
-      userId: user?._id
+      userId: user?._id,
+      hashedPasswordLength: user?.password?.length,
+      providedPasswordLength: password?.length
     });
     
     if (!user) {
@@ -157,15 +159,35 @@ const login = async (req, res, next) => {
       });
     }
 
-    // Verify password
-    const isMatch = await bcrypt.compare(password, user.password);
+    // Debug password verification
+    console.log('Password verification debug:', {
+      providedPassword: password,
+      storedHash: user.password,
+      passwordLength: password.length,
+      hashLength: user.password.length
+    });
+
+    // Verify password using the model's method
+    const isMatch = await user.comparePassword(password);
     console.log('Password verification:', { 
       isMatch,
       userId: user._id,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      passwordLength: password.length,
+      hashLength: user.password.length
     });
     
     if (!isMatch) {
+      // Try direct comparison for debugging
+      const salt = await bcrypt.genSalt(10); // Use same salt rounds as model
+      const newHash = await bcrypt.hash(password, salt);
+      console.log('Password debug:', {
+        providedPasswordHash: newHash,
+        storedHash: user.password,
+        passwordsMatch: newHash === user.password,
+        saltRounds: 10
+      });
+
       return res.status(400).json({
         success: false,
         message: 'Incorrect password'
