@@ -1,5 +1,6 @@
 const Vendor = require('../models/Vendor');
 const User = require('../models/User');
+const mongoose = require('mongoose');
 
 // Create a new vendor
 const createVendor = async (req, res) => {
@@ -220,6 +221,13 @@ const updateVendorStatus = async (req, res) => {
 // Get vendor profile for logged in user
 const getVendorProfile = async (req, res) => {
   try {
+    // Log the incoming request details
+    console.log('getVendorProfile request:', {
+      userId: req.user?._id,
+      userRole: req.user?.role,
+      headers: req.headers
+    });
+
     // Validate user exists in request
     if (!req.user || !req.user._id) {
       console.error('No user found in request');
@@ -233,12 +241,26 @@ const getVendorProfile = async (req, res) => {
     const userId = req.user._id;
 
     try {
+      // Log database connection status
+      console.log('Database connection state:', mongoose.connection.readyState);
+      
       const vendor = await Vendor.findOne({ userId });
+      console.log('Vendor query result:', {
+        found: !!vendor,
+        vendorId: vendor?._id,
+        userId: vendor?.userId
+      });
       
       if (!vendor) {
         console.log('No vendor profile found, fetching user data for initial profile');
         // If no vendor profile exists, create one with basic information
         const user = await User.findById(userId);
+        console.log('User query result:', {
+          found: !!user,
+          email: user?.email,
+          role: user?.role
+        });
+
         if (!user) {
           console.error('User not found:', userId);
           return res.status(404).json({
@@ -256,47 +278,96 @@ const getVendorProfile = async (req, res) => {
           });
         }
 
-        // Create initial vendor profile with all required fields
-        const newVendor = await Vendor.create({
-          userId,
-          businessName: user.fullName || 'My Business',
-          ownerName: user.fullName || 'Business Owner',
-          email: user.email,
-          phone: user.phone || '',
-          location: {
-            city: 'Your City',
-            state: 'Your State',
-            address: ''
-          },
-          serviceCategory: 'Other',
-          serviceDescription: 'New Vendor Profile',
-          isActive: true,
-          priceRange: {
-            min: 0,
-            max: 0
-          },
-          rating: {
-            average: 0,
-            count: 0
-          }
-        });
+        try {
+          // Create initial vendor profile with all required fields
+          const newVendor = await Vendor.create({
+            userId,
+            businessName: user.fullName || 'My Business',
+            ownerName: user.fullName || 'Business Owner',
+            email: user.email,
+            phone: user.phone || '',
+            location: {
+              city: 'Your City',
+              state: 'Your State',
+              address: ''
+            },
+            serviceCategory: 'Other',
+            serviceDescription: 'New Vendor Profile',
+            isActive: true,
+            priceRange: {
+              min: 0,
+              max: 0
+            },
+            rating: {
+              average: 0,
+              count: 0
+            }
+          });
 
-        console.log('Created initial vendor profile:', newVendor._id);
-        return res.status(200).json({
-          success: true,
-          message: 'Initial vendor profile created',
-          vendor: newVendor
-        });
+          console.log('Created initial vendor profile:', {
+            vendorId: newVendor._id,
+            userId: newVendor.userId
+          });
+
+          return res.status(200).json({
+            success: true,
+            message: 'Initial vendor profile created',
+            vendor: newVendor
+          });
+        } catch (createError) {
+          console.error('Error creating vendor profile:', {
+            error: createError.message,
+            code: createError.code,
+            stack: createError.stack
+          });
+          
+          if (createError.name === 'ValidationError') {
+            return res.status(400).json({
+              success: false,
+              message: 'Invalid vendor data',
+              errors: Object.values(createError.errors).map(err => err.message)
+            });
+          }
+
+          throw createError; // Re-throw for general error handling
+        }
       }
 
-      console.log('Found existing vendor profile:', vendor._id);
+      console.log('Found existing vendor profile:', {
+        vendorId: vendor._id,
+        businessName: vendor.businessName
+      });
+
       return res.status(200).json({
         success: true,
         message: 'Vendor profile retrieved successfully',
         vendor
       });
     } catch (dbError) {
-      console.error('Database error in getVendorProfile:', dbError);
+      console.error('Database error in getVendorProfile:', {
+        error: dbError.message,
+        code: dbError.code,
+        stack: dbError.stack,
+        name: dbError.name
+      });
+
+      // Check for specific database errors
+      if (dbError.name === 'MongooseError') {
+        return res.status(500).json({ 
+          success: false,
+          message: 'Database connection error',
+          error: dbError.message 
+        });
+      }
+
+      if (dbError.name === 'CastError') {
+        return res.status(400).json({ 
+          success: false,
+          message: 'Invalid ID format',
+          error: dbError.message 
+        });
+      }
+
       return res.status(500).json({ 
         success: false,
         message: 'Database error while fetching vendor profile',
@@ -304,7 +375,13 @@ const getVendorProfile = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Error in getVendorProfile:', error);
+    console.error('Error in getVendorProfile:', {
+      error: error.message,
+      code: error.code,
+      stack: error.stack,
+      name: error.name
+    });
+    
     return res.status(500).json({ 
       success: false,
       message: 'Error fetching/creating vendor profile',
