@@ -220,63 +220,92 @@ const updateVendorStatus = async (req, res) => {
 // Get vendor profile for logged in user
 const getVendorProfile = async (req, res) => {
   try {
-    console.log('Fetching vendor profile for user:', req.user._id);
-    const userId = req.user._id;
-    const vendor = await Vendor.findOne({ userId });
-    
-    if (!vendor) {
-      console.log('No vendor profile found, creating initial profile');
-      // If no vendor profile exists, create one with basic information
-      const user = await User.findById(userId);
-      if (!user) {
-        console.error('User not found:', userId);
-        return res.status(404).json({
-          success: false,
-          message: 'User not found'
-        });
-      }
-
-      // Create initial vendor profile with all required fields
-      const newVendor = await Vendor.create({
-        userId,
-        businessName: user.fullName || 'My Business',
-        ownerName: user.fullName,
-        email: user.email,
-        phone: user.phone || '',
-        location: {
-          city: 'Your City',
-          state: 'Your State'
-        },
-        serviceCategory: 'Other',
-        serviceDescription: 'New Vendor Profile',
-        isActive: true,
-        priceRange: {
-          min: 0,
-          max: 0
-        },
-        rating: {
-          average: 0,
-          count: 0
-        }
-      });
-
-      console.log('Created initial vendor profile:', newVendor._id);
-      return res.status(200).json({
-        success: true,
-        message: 'Initial vendor profile created',
-        vendor: newVendor
+    // Validate user exists in request
+    if (!req.user || !req.user._id) {
+      console.error('No user found in request');
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
       });
     }
 
-    console.log('Found existing vendor profile:', vendor._id);
-    res.status(200).json({
-      success: true,
-      message: 'Vendor profile retrieved successfully',
-      vendor
-    });
+    console.log('Fetching vendor profile for user:', req.user._id);
+    const userId = req.user._id;
+
+    try {
+      const vendor = await Vendor.findOne({ userId });
+      
+      if (!vendor) {
+        console.log('No vendor profile found, fetching user data for initial profile');
+        // If no vendor profile exists, create one with basic information
+        const user = await User.findById(userId);
+        if (!user) {
+          console.error('User not found:', userId);
+          return res.status(404).json({
+            success: false,
+            message: 'User not found'
+          });
+        }
+
+        // Validate required user data
+        if (!user.email) {
+          console.error('User email missing:', userId);
+          return res.status(400).json({
+            success: false,
+            message: 'User email is required'
+          });
+        }
+
+        // Create initial vendor profile with all required fields
+        const newVendor = await Vendor.create({
+          userId,
+          businessName: user.fullName || 'My Business',
+          ownerName: user.fullName || 'Business Owner',
+          email: user.email,
+          phone: user.phone || '',
+          location: {
+            city: 'Your City',
+            state: 'Your State',
+            address: ''
+          },
+          serviceCategory: 'Other',
+          serviceDescription: 'New Vendor Profile',
+          isActive: true,
+          priceRange: {
+            min: 0,
+            max: 0
+          },
+          rating: {
+            average: 0,
+            count: 0
+          }
+        });
+
+        console.log('Created initial vendor profile:', newVendor._id);
+        return res.status(200).json({
+          success: true,
+          message: 'Initial vendor profile created',
+          vendor: newVendor
+        });
+      }
+
+      console.log('Found existing vendor profile:', vendor._id);
+      return res.status(200).json({
+        success: true,
+        message: 'Vendor profile retrieved successfully',
+        vendor
+      });
+    } catch (dbError) {
+      console.error('Database error in getVendorProfile:', dbError);
+      return res.status(500).json({ 
+        success: false,
+        message: 'Database error while fetching vendor profile',
+        error: dbError.message 
+      });
+    }
   } catch (error) {
     console.error('Error in getVendorProfile:', error);
-    res.status(500).json({ 
+    return res.status(500).json({ 
       success: false,
       message: 'Error fetching/creating vendor profile',
       error: error.message 
