@@ -162,19 +162,28 @@ const getVendorProfile = async (req, res) => {
         return res.status(404).json({ message: 'User not found' });
       }
 
+      // Create initial vendor profile with all required fields
       const newVendor = await Vendor.create({
         userId,
-        businessName: user.fullName || 'Business Name',
-        ownerName: user.fullName,
+        businessName: user.fullName || 'My Business',
+        ownerName: user.fullName, // Required field
         email: user.email,
-        phone: user.phone,
+        phone: user.phone || '0000000000', // Required field
         location: {
-          city: 'Your City',
+          city: 'Your City', // Required field
           state: 'Your State'
         },
-        serviceCategory: 'Other',
-        serviceDescription: 'New Vendor',
-        isActive: true
+        serviceCategory: 'Other', // Required field from enum
+        serviceDescription: 'New Vendor Profile',
+        isActive: true,
+        priceRange: {
+          min: 0,
+          max: 0
+        },
+        rating: {
+          average: 0,
+          count: 0
+        }
       });
 
       return res.status(200).json(newVendor);
