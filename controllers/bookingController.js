@@ -47,6 +47,38 @@ const getCustomerBookings = async (req, res) => {
   }
 };
 
+// Get vendor's bookings
+const getVendorBookings = async (req, res) => {
+  try {
+    // First find the vendor document for the current user
+    const vendor = await Vendor.findOne({ userId: req.user._id });
+    if (!vendor) {
+      return res.status(404).json({ error: 'Vendor profile not found' });
+    }
+
+    // Find all bookings for this vendor
+    const bookings = await Booking.find({ vendorId: vendor._id })
+      .populate('customerId', 'fullName email phone')
+      .sort({ createdAt: -1 });
+
+    const formattedBookings = bookings.map(booking => ({
+      _id: booking._id,
+      customerName: booking.customerId.fullName,
+      customerEmail: booking.customerId.email,
+      customerPhone: booking.customerId.phone,
+      eventDate: booking.bookingDate,
+      status: booking.status,
+      message: booking.message,
+      createdAt: booking.createdAt
+    }));
+
+    res.json(formattedBookings);
+  } catch (err) {
+    console.error('Error fetching vendor bookings:', err);
+    res.status(500).json({ error: 'Failed to fetch vendor bookings' });
+  }
+};
+
 // Get booking by ID
 const getBookingById = async (req, res) => {
   try {
@@ -60,12 +92,12 @@ const getBookingById = async (req, res) => {
   }
 };
 
-// Update booking status
+// Update booking
 const updateBooking = async (req, res) => {
   try {
     const booking = await Booking.findByIdAndUpdate(
       req.params.id,
-      { status: req.body.status },
+      req.body,
       { new: true }
     );
     if (!booking) {
@@ -82,5 +114,6 @@ module.exports = {
   getBookings,
   getBookingById,
   updateBooking,
-  getCustomerBookings
+  getCustomerBookings,
+  getVendorBookings
 };

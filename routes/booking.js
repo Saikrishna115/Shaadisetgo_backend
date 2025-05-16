@@ -6,7 +6,8 @@ const {
   getBookings, 
   getBookingById, 
   updateBooking,
-  getCustomerBookings 
+  getCustomerBookings,
+  getVendorBookings
 } = require('../controllers/bookingController');
 
 /**
@@ -15,6 +16,13 @@ const {
  * @access  Private
  */
 router.get('/customer', verifyToken, getCustomerBookings);
+
+/**
+ * @route   GET /api/bookings/vendor
+ * @desc    Get vendor's bookings
+ * @access  Private
+ */
+router.get('/vendor', verifyToken, getVendorBookings);
 
 /**
  * @route   GET /api/bookings
