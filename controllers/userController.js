@@ -22,10 +22,41 @@ const updateUserProfile = async (req, res) => {
         delete updates.password;
         delete updates.role;
 
+        // Validate required fields
+        const requiredFields = ['fullName', 'email', 'phone'];
+        const missingFields = requiredFields.filter(field => !updates[field]);
+        if (missingFields.length > 0) {
+            return res.status(400).json({
+                message: 'Missing required fields',
+                fields: missingFields
+            });
+        }
+
+        // Create update object with validated fields
+        const updateData = {
+            fullName: updates.fullName,
+            email: updates.email,
+            phone: updates.phone,
+            address: updates.address,
+            city: updates.city,
+            state: updates.state,
+            pincode: updates.pincode
+        };
+
+        // Handle preferences if provided
+        if (updates.preferences) {
+            updateData.preferences = {
+                eventType: updates.preferences.eventType,
+                eventDate: updates.preferences.eventDate,
+                budget: updates.preferences.budget,
+                guestCount: updates.preferences.guestCount
+            };
+        }
+
         // Perform the update
         const updatedUser = await User.findByIdAndUpdate(
             req.user.id,
-            { $set: updates },
+            { $set: updateData },
             { new: true, runValidators: true }
         ).select('-password');
 
@@ -35,6 +66,7 @@ const updateUserProfile = async (req, res) => {
 
         res.json(updatedUser);
     } catch (error) {
+        console.error('Profile update error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
