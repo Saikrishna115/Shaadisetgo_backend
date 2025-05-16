@@ -29,7 +29,6 @@ const verifyToken = async (req, res, next) => {
     // Verify token with strong secret from environment variables
     const decoded = jwt.verify(token, process.env.JWT_SECRET, {
       algorithms: ['HS256'], // Explicitly specify the algorithm
-      maxAge: process.env.JWT_EXPIRES_IN || '1h' // Token expiration
     });
 
     if (!decoded.userId) {
