@@ -117,9 +117,11 @@ const register = async (req, res, next) => {
 
 const login = async (req, res, next) => {
   try {
+    console.log('Login attempt:', { email: req.body.email });
     const { email, password } = req.body;
 
     if (!email || !password) {
+      console.log('Missing credentials:', { email: !!email, password: !!password });
       return res.status(400).json({
         success: false,
         message: 'Please provide both email and password'
@@ -128,6 +130,7 @@ const login = async (req, res, next) => {
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
+      console.log('Invalid email format:', { email });
       return res.status(400).json({
         success: false,
         message: 'Invalid email format'
@@ -136,6 +139,8 @@ const login = async (req, res, next) => {
 
     // Find user and check if they exist
     const user = await User.findOne({ email });
+    console.log('User found:', { exists: !!user, role: user?.role });
+    
     if (!user) {
       return res.status(400).json({
         success: false,
@@ -145,6 +150,8 @@ const login = async (req, res, next) => {
 
     // Verify password
     const isMatch = await bcrypt.compare(password, user.password);
+    console.log('Password match:', { isMatch });
+    
     if (!isMatch) {
       return res.status(400).json({
         success: false,
@@ -154,7 +161,10 @@ const login = async (req, res, next) => {
 
     // If user is a vendor, check if they have a vendor profile
     if (user.role === 'vendor') {
+      console.log('Checking vendor profile for user:', user._id);
       const vendorProfile = await Vendor.findOne({ userId: user._id });
+      console.log('Vendor profile:', { exists: !!vendorProfile, isActive: vendorProfile?.isActive });
+      
       if (!vendorProfile) {
         return res.status(400).json({
           success: false,
@@ -172,6 +182,7 @@ const login = async (req, res, next) => {
 
     // Generate token and send response
     const token = generateToken(user._id, user.role);
+    console.log('Login successful:', { userId: user._id, role: user.role });
 
     res.status(200).json({
       success: true,
