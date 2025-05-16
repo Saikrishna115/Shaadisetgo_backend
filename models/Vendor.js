@@ -32,10 +32,24 @@ const vendorSchema = new mongoose.Schema({
     min: { type: Number },
     max: { type: Number }
   },
-  availableDates: [{
+
+  // Availability and Capacity Management
+  maxEventsPerDay: { type: Number, default: 1 },
+  availability: [{
     date: { type: Date },
-    isBooked: { type: Boolean, default: false }
+    eventsBooked: { type: Number, default: 0 },
+    isFullyBooked: { type: Boolean, default: false },
+    notes: { type: String }
   }],
+  workingHours: {
+    start: { type: String, default: '09:00' },
+    end: { type: String, default: '18:00' }
+  },
+  blockedDates: [{ 
+    date: { type: Date },
+    reason: { type: String }
+  }],
+
   tags: [{ type: String }],
 
   // Media & Assets
@@ -64,5 +78,8 @@ vendorSchema.index({ 'location.city': 1, 'location.state': 1 });
 
 // Add index for service category and rating
 vendorSchema.index({ serviceCategory: 1, 'rating.average': -1 });
+
+// Add index for availability queries
+vendorSchema.index({ 'availability.date': 1, 'availability.isFullyBooked': 1 });
 
 module.exports = mongoose.model('Vendor', vendorSchema);

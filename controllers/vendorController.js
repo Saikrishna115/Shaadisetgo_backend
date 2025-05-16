@@ -416,6 +416,91 @@ const getVendorProfile = async (req, res) => {
   }
 };
 
+// Get vendor availability
+const getVendorAvailability = async (req, res) => {
+  try {
+    const vendor = await Vendor.findOne({ userId: req.user.id });
+    if (!vendor) {
+      return res.status(404).json({ message: 'Vendor not found' });
+    }
+
+    const availability = vendor.availability || [];
+    res.status(200).json(availability);
+  } catch (error) {
+    console.error('Error fetching vendor availability:', error);
+    res.status(500).json({ message: 'Error fetching availability', error: error.message });
+  }
+};
+
+// Update vendor availability
+const updateVendorAvailability = async (req, res) => {
+  try {
+    const { date, eventsBooked, isFullyBooked, notes } = req.body;
+
+    const vendor = await Vendor.findOne({ userId: req.user.id });
+    if (!vendor) {
+      return res.status(404).json({ message: 'Vendor not found' });
+    }
+
+    // Find existing availability entry or create new one
+    const availabilityIndex = vendor.availability.findIndex(
+      a => new Date(a.date).toISOString().split('T')[0] === new Date(date).toISOString().split('T')[0]
+    );
+
+    if (availabilityIndex > -1) {
+      // Update existing entry
+      vendor.availability[availabilityIndex] = {
+        date,
+        eventsBooked,
+        isFullyBooked,
+        notes
+      };
+    } else {
+      // Add new entry
+      vendor.availability.push({
+        date,
+        eventsBooked,
+        isFullyBooked,
+        notes
+      });
+    }
+
+    await vendor.save();
+    res.status(200).json({ message: 'Availability updated successfully', availability: vendor.availability });
+  } catch (error) {
+    console.error('Error updating vendor availability:', error);
+    res.status(500).json({ message: 'Error updating availability', error: error.message });
+  }
+};
+
+// Update vendor settings
+const updateVendorSettings = async (req, res) => {
+  try {
+    const { maxEventsPerDay, workingHours } = req.body;
+
+    const vendor = await Vendor.findOne({ userId: req.user.id });
+    if (!vendor) {
+      return res.status(404).json({ message: 'Vendor not found' });
+    }
+
+    // Update settings
+    vendor.maxEventsPerDay = maxEventsPerDay;
+    vendor.workingHours = workingHours;
+
+    await vendor.save();
+    res.status(200).json({ 
+      message: 'Settings updated successfully',
+      settings: {
+        maxEventsPerDay: vendor.maxEventsPerDay,
+        workingHours: vendor.workingHours
+      }
+    });
+  } catch (error) {
+    console.error('Error updating vendor settings:', error);
+    res.status(500).json({ message: 'Error updating settings', error: error.message });
+  }
+};
+
 module.exports = {
   createVendor,
   getVendors,
@@ -425,5 +510,8 @@ module.exports = {
   deleteVendor,
   getAdminVendors,
   updateVendorStatus,
-  getVendorProfile
+  getVendorProfile,
+  getVendorAvailability,
+  updateVendorAvailability,
+  updateVendorSettings
 };
