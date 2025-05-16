@@ -4,53 +4,100 @@ const User = require('../models/User');
 // Create a new vendor
 const createVendor = async (req, res) => {
   try {
+    console.log('Creating vendor profile:', req.body);
     const userId = req.user._id;
     const user = await User.findById(userId);
 
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      console.error('User not found:', userId);
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
     }
 
     const existingVendor = await Vendor.findOne({ userId });
     if (existingVendor) {
-      return res.status(400).json({ message: 'Vendor profile already exists' });
+      console.log('Vendor profile already exists:', existingVendor._id);
+      return res.status(400).json({
+        success: false,
+        message: 'Vendor profile already exists'
+      });
     }
 
+    // Validate required fields
     const requiredFields = ['businessName', 'ownerName', 'phone', 'location', 'serviceCategory'];
-    const missingFields = requiredFields.filter(field => !req.body[field]);
+    const missingFields = requiredFields.filter(field => {
+      if (field === 'location') {
+        return !req.body.location || !req.body.location.city;
+      }
+      return !req.body[field];
+    });
+
     if (missingFields.length > 0) {
-      return res.status(400).json({ message: 'Missing required fields', fields: missingFields });
+      console.error('Missing required fields:', missingFields);
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields',
+        fields: missingFields
+      });
     }
 
     // Create vendor profile with all required fields
-    const vendor = await Vendor.create({
+    const vendorData = {
       ...req.body,
       userId,
       email: user.email,
       isActive: true,
-      isVerified: false, // Vendors need to be verified by admin
+      isVerified: false,
       rating: {
         average: 0,
         count: 0
       },
-      priceRange: {
+      priceRange: req.body.priceRange || {
         min: 0,
         max: 0
       }
-    });
+    };
+
+    console.log('Creating vendor with data:', vendorData);
+    const vendor = await Vendor.create(vendorData);
 
     // Update user role to vendor if not already set
     if (user.role !== 'vendor') {
       await User.findByIdAndUpdate(userId, { role: 'vendor' });
     }
 
+    console.log('Vendor profile created successfully:', vendor._id);
     res.status(201).json({
       success: true,
       message: 'Vendor profile created successfully',
       vendor
     });
   } catch (error) {
-    console.error('Error creating vendor profile:', error);
+    console.error('Error creating vendor profile:', {
+      error: error.message,
+      stack: error.stack,
+      body: req.body
+    });
+
+    // Handle mongoose validation errors
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid vendor data',
+        errors: Object.values(error.errors).map(err => err.message)
+      });
+    }
+
+    // Handle duplicate key errors
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'A vendor with this email already exists'
+      });
+    }
+
     res.status(500).json({ 
       success: false,
       message: 'Error creating vendor profile', 
