@@ -40,7 +40,7 @@ userSchema.methods.comparePassword = function (enteredPassword) {
 // Generate JWT token
 userSchema.methods.generateToken = function () {
   return jwt.sign(
-    { id: this._id, role: this.role },
+    { _id: this._id, role: this.role },
     process.env.JWT_SECRET,
     { expiresIn: '1d' }
   );

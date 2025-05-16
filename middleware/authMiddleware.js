@@ -31,7 +31,7 @@ const verifyToken = async (req, res, next) => {
       algorithms: ['HS256'], // Explicitly specify the algorithm
     });
 
-    if (!decoded.userId) {
+    if (!decoded._id) {
       return res.status(401).json({
         success: false,
         message: 'Invalid token payload. User ID not found.'
@@ -39,7 +39,7 @@ const verifyToken = async (req, res, next) => {
     }
 
     // Fetch user from database to ensure they still exist and are active
-    const user = await User.findById(decoded.userId).select('-password');
+    const user = await User.findById(decoded._id).select('-password');
     if (!user) {
       return res.status(401).json({
         success: false,

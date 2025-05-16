@@ -5,7 +5,7 @@ const User = require('../models/User');
 // Generate JWT token with secure settings
 const generateToken = (userId, role) => {
   return jwt.sign(
-    { userId, role },
+    { _id: userId, role },
     process.env.JWT_SECRET,
     {
       expiresIn: process.env.JWT_EXPIRES_IN || '1d',
@@ -170,7 +170,7 @@ const login = async (req, res, next) => {
 
 const getProfile = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.userId).select('-password');
+    const user = await User.findById(req.user._id).select('-password');
     res.status(200).json(user);
   } catch (error) {
     next(error);
