@@ -258,7 +258,8 @@ const getVendorProfile = async (req, res) => {
         console.log('User query result:', {
           found: !!user,
           email: user?.email,
-          role: user?.role
+          role: user?.role,
+          fullName: user?.fullName
         });
 
         if (!user) {
@@ -280,20 +281,22 @@ const getVendorProfile = async (req, res) => {
 
         try {
           // Create initial vendor profile with all required fields
-          const newVendor = await Vendor.create({
+          const vendorData = {
             userId,
             businessName: user.fullName || 'My Business',
             ownerName: user.fullName || 'Business Owner',
             email: user.email,
-            phone: user.phone || '',
+            phone: user.phone || '0000000000', // Default phone number
             location: {
               city: 'Your City',
               state: 'Your State',
-              address: ''
+              address: '',
+              pincode: ''
             },
             serviceCategory: 'Other',
             serviceDescription: 'New Vendor Profile',
             isActive: true,
+            isVerified: false,
             priceRange: {
               min: 0,
               max: 0
@@ -301,12 +304,26 @@ const getVendorProfile = async (req, res) => {
             rating: {
               average: 0,
               count: 0
-            }
-          });
+            },
+            experienceYears: 0,
+            availableDates: [],
+            tags: [],
+            gallery: [],
+            profileImage: '',
+            reviews: []
+          };
+
+          console.log('Creating initial vendor profile with data:', vendorData);
+
+          const newVendor = await Vendor.create(vendorData);
+
+          // Update user role to vendor
+          await User.findByIdAndUpdate(userId, { role: 'vendor' });
 
           console.log('Created initial vendor profile:', {
             vendorId: newVendor._id,
-            userId: newVendor.userId
+            userId: newVendor.userId,
+            businessName: newVendor.businessName
           });
 
           return res.status(200).json({
@@ -318,7 +335,9 @@ const getVendorProfile = async (req, res) => {
           console.error('Error creating vendor profile:', {
             error: createError.message,
             code: createError.code,
-            stack: createError.stack
+            stack: createError.stack,
+            name: createError.name,
+            errors: createError.errors
           });
           
           if (createError.name === 'ValidationError') {
@@ -326,6 +345,13 @@ const getVendorProfile = async (req, res) => {
               success: false,
               message: 'Invalid vendor data',
               errors: Object.values(createError.errors).map(err => err.message)
+            });
+          }
+
+          if (createError.code === 11000) {
+            return res.status(400).json({
+              success: false,
+              message: 'A vendor with this email already exists'
             });
           }
 
