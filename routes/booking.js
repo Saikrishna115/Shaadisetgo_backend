@@ -1,7 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middleware/authMiddleware');
-const { createBooking, getBookings, getBookingById, updateBooking } = require('../controllers/bookingController');
+const { 
+  createBooking, 
+  getBookings, 
+  getBookingById, 
+  updateBooking,
+  getCustomerBookings 
+} = require('../controllers/bookingController');
+
+/**
+ * @route   GET /api/bookings/customer
+ * @desc    Get customer's bookings
+ * @access  Private
+ */
+router.get('/customer', verifyToken, getCustomerBookings);
 
 /**
  * @route   GET /api/bookings
@@ -26,7 +39,7 @@ router.post('/', verifyToken, createBooking);
 
 /**
  * @route   PUT /api/bookings/:id
- * @desc    Update booking by ID
+ * @desc    Update booking status
  * @access  Private
  */
 router.put('/:id', verifyToken, updateBooking);

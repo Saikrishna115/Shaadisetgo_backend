@@ -71,6 +71,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/vendors', vendorRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/favorites', require('./routes/favorite'));
 
 // --- Start Server ---
 const PORT = process.env.PORT || 10000;

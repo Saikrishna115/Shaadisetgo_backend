@@ -1,5 +1,6 @@
 // controllers/bookingController.js
 const Booking = require('../models/Booking');
+const Vendor = require('../models/Vendor');
 
 // Create a booking
 const createBooking = async (req, res) => {
@@ -21,6 +22,31 @@ const getBookings = async (req, res) => {
   }
 };
 
+// Get customer's bookings
+const getCustomerBookings = async (req, res) => {
+  try {
+    const bookings = await Booking.find({ customerId: req.user.id })
+      .populate('vendorId', 'businessName serviceType')
+      .sort({ createdAt: -1 });
+
+    const formattedBookings = bookings.map(booking => ({
+      _id: booking._id,
+      vendorName: booking.vendorId.businessName,
+      service: booking.vendorId.serviceType,
+      eventDate: booking.bookingDate,
+      status: booking.status,
+      amount: booking.amount,
+      message: booking.message,
+      createdAt: booking.createdAt
+    }));
+
+    res.json(formattedBookings);
+  } catch (err) {
+    console.error('Error fetching customer bookings:', err);
+    res.status(500).json({ error: 'Failed to fetch customer bookings' });
+  }
+};
+
 // Get booking by ID
 const getBookingById = async (req, res) => {
   try {
@@ -34,10 +60,14 @@ const getBookingById = async (req, res) => {
   }
 };
 
-// Update booking
+// Update booking status
 const updateBooking = async (req, res) => {
   try {
-    const booking = await Booking.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const booking = await Booking.findByIdAndUpdate(
+      req.params.id,
+      { status: req.body.status },
+      { new: true }
+    );
     if (!booking) {
       return res.status(404).json({ error: 'Booking not found' });
     }
@@ -51,5 +81,6 @@ module.exports = {
   createBooking,
   getBookings,
   getBookingById,
-  updateBooking
+  updateBooking,
+  getCustomerBookings
 };
