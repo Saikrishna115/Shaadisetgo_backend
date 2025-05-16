@@ -117,7 +117,11 @@ const register = async (req, res, next) => {
 
 const login = async (req, res, next) => {
   try {
-    console.log('Login attempt:', { email: req.body.email });
+    console.log('Login attempt:', { 
+      email: req.body.email,
+      hasPassword: !!req.body.password,
+      timestamp: new Date().toISOString()
+    });
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -138,24 +142,33 @@ const login = async (req, res, next) => {
     }
 
     // Find user and check if they exist
-    const user = await User.findOne({ email });
-    console.log('User found:', { exists: !!user, role: user?.role });
+    const user = await User.findOne({ email }).select('+password');
+    console.log('User lookup result:', { 
+      exists: !!user, 
+      email,
+      role: user?.role,
+      userId: user?._id
+    });
     
     if (!user) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid credentials'
+        message: 'No account found with this email address'
       });
     }
 
     // Verify password
     const isMatch = await bcrypt.compare(password, user.password);
-    console.log('Password match:', { isMatch });
+    console.log('Password verification:', { 
+      isMatch,
+      userId: user._id,
+      timestamp: new Date().toISOString()
+    });
     
     if (!isMatch) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid credentials'
+        message: 'Incorrect password'
       });
     }
 
@@ -163,7 +176,11 @@ const login = async (req, res, next) => {
     if (user.role === 'vendor') {
       console.log('Checking vendor profile for user:', user._id);
       const vendorProfile = await Vendor.findOne({ userId: user._id });
-      console.log('Vendor profile:', { exists: !!vendorProfile, isActive: vendorProfile?.isActive });
+      console.log('Vendor profile:', { 
+        exists: !!vendorProfile, 
+        isActive: vendorProfile?.isActive,
+        userId: user._id
+      });
       
       if (!vendorProfile) {
         return res.status(400).json({
@@ -182,7 +199,11 @@ const login = async (req, res, next) => {
 
     // Generate token and send response
     const token = generateToken(user._id, user.role);
-    console.log('Login successful:', { userId: user._id, role: user.role });
+    console.log('Login successful:', { 
+      userId: user._id, 
+      role: user.role,
+      timestamp: new Date().toISOString()
+    });
 
     res.status(200).json({
       success: true,
@@ -197,7 +218,11 @@ const login = async (req, res, next) => {
       }
     });
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('Login error:', {
+      error: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
     next(error);
   }
 };
