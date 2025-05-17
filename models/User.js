@@ -25,6 +25,18 @@ const userSchema = new mongoose.Schema({
     enum: ['admin', 'vendor', 'customer'],
     default: 'customer',
   },
+  address: {
+    type: String,
+  },
+  city: {
+    type: String,
+  },
+  state: {
+    type: String,
+  },
+  pincode: {
+    type: String,
+  },
   resetPasswordToken: String,
   resetPasswordExpires: Date,
   preferences: {
