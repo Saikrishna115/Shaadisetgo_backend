@@ -3,10 +3,27 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Vendor = require('../models/Vendor');
 
+// Error messages
+const ERROR_MESSAGES = {
+  INVALID_CREDENTIALS: 'Invalid email or password',
+  ACCOUNT_LOCKED: 'Account is temporarily locked. Please try again later',
+  VENDOR_PROFILE_MISSING: 'Vendor profile not found. Please complete your profile setup',
+  VENDOR_INACTIVE: 'Your vendor account is currently inactive. Please contact support',
+  INVALID_EMAIL: 'Please enter a valid email address',
+  INVALID_PASSWORD: 'Password must be at least 8 characters long and contain uppercase, lowercase, number and special character',
+  USER_EXISTS: 'User with this email already exists',
+  INVALID_PHONE: 'Please enter a valid 10-digit phone number',
+  INVALID_ROLE: 'Invalid role. Must be either "customer" or "vendor"'
+};
+
 // Generate JWT token with secure settings
-const generateToken = (userId, role) => {
+const generateToken = (userId, role, passwordTimestamp) => {
   return jwt.sign(
-    { _id: userId, role },
+    { 
+      _id: userId, 
+      role,
+      version: passwordTimestamp || 'v1'
+    },
     process.env.JWT_SECRET,
     {
       expiresIn: process.env.JWT_EXPIRES_IN || '1d',
@@ -35,7 +52,7 @@ const register = async (req, res, next) => {
     if (!emailRegex.test(email)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid email format'
+        message: ERROR_MESSAGES.INVALID_EMAIL
       });
     }
 
@@ -44,25 +61,25 @@ const register = async (req, res, next) => {
     if (!passwordRegex.test(password)) {
       return res.status(400).json({
         success: false,
-        message: 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character'
+        message: ERROR_MESSAGES.INVALID_PASSWORD
       });
     }
 
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: 'User with this email already exists'
+        message: ERROR_MESSAGES.USER_EXISTS
       });
     }
 
-    // Validate phone number format
+    // Validate phone number
     const phoneRegex = /^[0-9]{10}$/;
     if (!phoneRegex.test(phone)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid phone number format'
+        message: ERROR_MESSAGES.INVALID_PHONE
       });
     }
 
@@ -71,25 +88,31 @@ const register = async (req, res, next) => {
     if (role && !validRoles.includes(role)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid role. Must be either "customer" or "vendor"'
+        message: ERROR_MESSAGES.INVALID_ROLE
       });
     }
 
-    // Hash password
-    const salt = await bcrypt.genSalt(12);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // Create new user
+    // Create new user with enhanced security
     const user = await User.create({
-      fullName,
-      email,
-      password: hashedPassword,
+      fullName: fullName.trim(),
+      email: email.toLowerCase(),
+      password,
       role: role || 'customer',
-      phone
+      phone,
+      lastLogin: new Date(),
+      loginAttempts: 0
     });
 
     // Generate token
-    const token = generateToken(user._id, user.role);
+    const token = generateToken(user._id, user.role, user.passwordChangedAt?.getTime());
+
+    // Log successful registration
+    console.log('User registered successfully:', {
+      userId: user._id,
+      email: user.email,
+      role: user.role,
+      timestamp: new Date().toISOString()
+    });
 
     res.status(201).json({
       success: true,
@@ -117,112 +140,77 @@ const register = async (req, res, next) => {
 
 const login = async (req, res, next) => {
   try {
-    console.log('Login attempt:', { 
-      email: req.body.email,
-      hasPassword: !!req.body.password,
-      timestamp: new Date().toISOString()
-    });
     const { email, password } = req.body;
 
+    // Input validation
     if (!email || !password) {
-      console.log('Missing credentials:', { email: !!email, password: !!password });
       return res.status(400).json({
         success: false,
         message: 'Please provide both email and password'
       });
     }
 
+    // Email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      console.log('Invalid email format:', { email });
       return res.status(400).json({
         success: false,
-        message: 'Invalid email format'
+        message: ERROR_MESSAGES.INVALID_EMAIL
       });
     }
 
-    // Find user and check if they exist
-    const user = await User.findOne({ email }).select('+password');
-    console.log('User lookup result:', { 
-      exists: !!user, 
-      email,
-      role: user?.role,
-      userId: user?._id,
-      hashedPasswordLength: user?.password?.length,
-      providedPasswordLength: password?.length
-    });
+    // Find user with password (password select is false by default)
+    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
     
     if (!user) {
       return res.status(400).json({
         success: false,
-        message: 'No account found with this email address'
+        message: ERROR_MESSAGES.INVALID_CREDENTIALS
       });
     }
 
-    // Debug password verification
-    console.log('Password verification debug:', {
-      providedPassword: password,
-      storedHash: user.password,
-      passwordLength: password.length,
-      hashLength: user.password.length
-    });
-
-    // Verify password using the model's method
-    const isMatch = await user.comparePassword(password);
-    console.log('Password verification:', { 
-      isMatch,
-      userId: user._id,
-      timestamp: new Date().toISOString(),
-      passwordLength: password.length,
-      hashLength: user.password.length
-    });
-    
-    if (!isMatch) {
-      // Try direct comparison for debugging
-      const salt = await bcrypt.genSalt(10); // Use same salt rounds as model
-      const newHash = await bcrypt.hash(password, salt);
-      console.log('Password debug:', {
-        providedPasswordHash: newHash,
-        storedHash: user.password,
-        passwordsMatch: newHash === user.password,
-        saltRounds: 10
-      });
-
+    try {
+      // This will handle password comparison and account locking
+      const isMatch = await user.comparePassword(password);
+      
+      if (!isMatch) {
+        return res.status(400).json({
+          success: false,
+          message: user.isLocked() ? ERROR_MESSAGES.ACCOUNT_LOCKED : ERROR_MESSAGES.INVALID_CREDENTIALS
+        });
+      }
+    } catch (error) {
       return res.status(400).json({
         success: false,
-        message: 'Incorrect password'
+        message: error.message
       });
     }
 
-    // If user is a vendor, check if they have a vendor profile
+    // Additional vendor checks
     if (user.role === 'vendor') {
-      console.log('Checking vendor profile for user:', user._id);
       const vendorProfile = await Vendor.findOne({ userId: user._id });
-      console.log('Vendor profile:', { 
-        exists: !!vendorProfile, 
-        isActive: vendorProfile?.isActive,
-        userId: user._id
-      });
       
       if (!vendorProfile) {
         return res.status(400).json({
           success: false,
-          message: 'Vendor profile not found. Please complete your profile setup.'
+          message: ERROR_MESSAGES.VENDOR_PROFILE_MISSING
         });
       }
 
       if (!vendorProfile.isActive) {
         return res.status(400).json({
           success: false,
-          message: 'Your vendor account is currently inactive. Please contact support.'
+          message: ERROR_MESSAGES.VENDOR_INACTIVE
         });
       }
     }
 
-    // Generate token and send response
-    const token = generateToken(user._id, user.role);
-    console.log('Login successful:', { 
-      userId: user._id, 
+    // Generate token with password change timestamp
+    const token = generateToken(user._id, user.role, user.passwordChangedAt?.getTime());
+
+    // Log successful login
+    console.log('Login successful:', {
+      userId: user._id,
       role: user.role,
       timestamp: new Date().toISOString()
     });
@@ -251,8 +239,17 @@ const login = async (req, res, next) => {
 
 const getProfile = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user._id).select('-password');
-    res.status(200).json(user);
+    const user = await User.findById(req.user._id).select('-password -loginAttempts -lockUntil');
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    res.status(200).json({
+      success: true,
+      data: user
+    });
   } catch (error) {
     next(error);
   }
