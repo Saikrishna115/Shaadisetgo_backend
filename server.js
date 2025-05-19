@@ -21,7 +21,8 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
-  'https://shaadisetgo-frontend.vercel.app'
+  'https://shaadisetgo-frontend.vercel.app',
+  'https://shaadisetgo.vercel.app'
 ];
 
 app.use(cors({
@@ -36,8 +37,10 @@ app.use(cors({
     return callback(null, true);
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 86400 // 24 hours
 }));
 
 app.use(express.json());
