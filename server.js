@@ -1,9 +1,10 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const morgan = require('morgan');
 const dotenv = require('dotenv');
-const connectDB = require('./config/database');
+const authRoutes = require('./routes/authRoutes');
+const vendorRoutes = require('./routes/vendorRoutes');
+const bookingRoutes = require('./routes/bookingRoutes');
 
 // Load environment variables from .env file
 dotenv.config();
@@ -19,138 +20,52 @@ if (missingEnvVars.length > 0) {
 
 const app = express();
 
-// --- CORS Configuration ---
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:5173',
-  'https://shaadisetgo-frontend.vercel.app',
-];
-
-const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: [
-    'Content-Type',
-    'Authorization',
-    'Cache-Control',
-    'Pragma',
-    'Expires',
-  ],
-  exposedHeaders: ['Content-Length', 'Content-Type'],
-};
-
-app.use(cors(corsOptions));
+// Middleware
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  credentials: true
+}));
 app.use(express.json());
-app.use(morgan('dev'));
 
-// --- MongoDB Connection ---
-const startServer = async () => {
+// MongoDB Connection
+const connectDB = async () => {
   try {
-    await connectDB();
+    console.log('Attempting to connect to MongoDB...');
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true
+    });
+    console.log('MongoDB Connected:', mongoose.connection.host);
     console.log('Database connection established');
-
-    // Monitor MongoDB connection
-    mongoose.connection.on('error', err => {
-      console.error('MongoDB error:', {
-        message: err.message,
-        code: err.code,
-        stack: err.stack
-      });
-    });
-
-    mongoose.connection.on('disconnected', () => {
-      console.error('MongoDB disconnected. Attempting to reconnect...');
-    });
-
-    // --- Routes ---
-    app.get('/', (req, res) => {
-      res.send('Welcome to ShaadiSetGo API');
-    });
-
-    app.get('/health', (req, res) => {
-      const dbState = mongoose.connection.readyState;
-      res.json({ 
-        status: 'healthy',
-        database: {
-          state: dbState,
-          connected: dbState === 1,
-          url: process.env.NODE_ENV === 'development' ? mongoose.connection.host : undefined
-        },
-        uptime: process.uptime(),
-        timestamp: new Date().toISOString()
-      });
-    });
-
-    // Import routes
-    const authRoutes = require('./routes/authRoutes');
-    const userRoutes = require('./routes/userRoutes');
-    const vendorRoutes = require('./routes/vendorRoutes');
-    const bookingRoutes = require('./routes/booking');
-
-    // Use routes
-    app.use('/api/auth', authRoutes);
-    app.use('/api/users', userRoutes);
-    app.use('/api/vendors', vendorRoutes);
-    app.use('/api/bookings', bookingRoutes);
-    app.use('/api/favorites', require('./routes/favorite'));
-
-    // --- Error Handling Middleware ---
-    // Handle 404 errors
-    app.use((req, res, next) => {
-      const error = new Error('Not Found');
-      error.status = 404;
-      next(error);
-    });
-
-    // Global error handler
-    app.use((err, req, res, next) => {
-      console.error('Error details:', {
-        message: err.message,
-        stack: err.stack,
-        status: err.status || 500,
-        path: req.path,
-        method: req.method,
-        body: req.body,
-        query: req.query,
-        params: req.params,
-        headers: req.headers,
-        timestamp: new Date().toISOString()
-      });
-
-      // Don't expose stack trace in production
-      const error = {
-        success: false,
-        message: err.message || 'Internal Server Error',
-        error: process.env.NODE_ENV === 'development' ? err.stack : undefined,
-        status: err.status || 500,
-        path: req.path,
-        timestamp: new Date().toISOString()
-      };
-
-      res.status(error.status).json(error);
-    });
-
-    // --- Start Server ---
-    const PORT = process.env.PORT || 10000;
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
   } catch (error) {
-    console.error('Failed to start server:', {
-      message: error.message,
-      stack: error.stack,
-      code: error.code
-    });
+    console.error('MongoDB connection error:', error);
     process.exit(1);
   }
 };
 
-// Start the server
-startServer();
+connectDB();
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/vendors', vendorRoutes);
+app.use('/api/bookings', bookingRoutes);
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ 
+    error: 'Something went wrong!',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
+
+// Start server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
