@@ -1,5 +1,21 @@
 const mongoose = require('mongoose');
 
+const messageSchema = new mongoose.Schema({
+  message: {
+    type: String,
+    required: true
+  },
+  sender: {
+    type: String,
+    enum: ['customer', 'vendor'],
+    required: true
+  },
+  timestamp: {
+    type: Date,
+    default: Date.now
+  }
+});
+
 const bookingSchema = new mongoose.Schema({
   customerId: { 
     type: mongoose.Schema.Types.ObjectId, 
@@ -42,6 +58,7 @@ const bookingSchema = new mongoose.Schema({
   vendorResponseDate: {
     type: Date
   },
+  messageHistory: [messageSchema],
   customerName: {
     type: String,
     required: true

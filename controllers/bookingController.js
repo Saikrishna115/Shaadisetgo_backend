@@ -119,7 +119,7 @@ const getBookingById = async (req, res) => {
 // Update booking status
 const updateBooking = async (req, res) => {
   try {
-    const { status, vendorResponse } = req.body;
+    const { status, vendorResponse, messageType } = req.body;
     const booking = await Booking.findById(req.params.id);
 
     if (!booking) {
@@ -156,9 +156,24 @@ const updateBooking = async (req, res) => {
     if (status) {
       updateData.status = status;
     }
+    
+    // Handle vendor response
     if (vendorResponse) {
-      updateData.vendorResponse = vendorResponse;
-      updateData.vendorResponseDate = new Date();
+      // If this is a new message (not status change)
+      if (messageType === 'message' && booking.status === 'confirmed') {
+        // Add to message history
+        const messageHistory = booking.messageHistory || [];
+        messageHistory.push({
+          message: vendorResponse,
+          sender: 'vendor',
+          timestamp: new Date()
+        });
+        updateData.messageHistory = messageHistory;
+      } else {
+        // This is a response to booking request
+        updateData.vendorResponse = vendorResponse;
+        updateData.vendorResponseDate = new Date();
+      }
     }
 
     const updatedBooking = await Booking.findByIdAndUpdate(
