@@ -7,34 +7,29 @@ const SALT_WORK_FACTOR = 12; // Increased from 10 to 12 for better security
 const userSchema = new mongoose.Schema({
   fullName: {
     type: String,
-    required: [true, 'Full name is required'],
+    required: [true, 'Please provide your full name'],
     trim: true
   },
   email: {
     type: String,
+    required: [true, 'Please provide your email'],
     unique: true,
-    required: [true, 'Email is required'],
-    trim: true,
     lowercase: true,
-    match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please enter a valid email']
+    match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email']
   },
   password: {
     type: String,
-    required: [true, 'Password is required'],
-    minlength: [8, 'Password must be at least 8 characters long'],
-    select: false // Don't include password by default in queries
+    required: [true, 'Please provide a password'],
+    minlength: 6,
+    select: false
   },
   phone: {
     type: String,
-    required: [true, 'Phone number is required'],
-    match: [/^[0-9]{10}$/, 'Please enter a valid 10-digit phone number']
+    required: [true, 'Please provide your phone number']
   },
   role: {
     type: String,
-    enum: {
-      values: ['admin', 'vendor', 'customer'],
-      message: '{VALUE} is not a valid role'
-    },
+    enum: ['customer', 'vendor', 'admin'],
     default: 'customer'
   },
   address: String,
@@ -42,7 +37,7 @@ const userSchema = new mongoose.Schema({
   state: String,
   pincode: String,
   resetPasswordToken: String,
-  resetPasswordExpires: Date,
+  resetPasswordExpire: Date,
   passwordChangedAt: Date,
   lastLogin: Date,
   loginAttempts: {
@@ -72,29 +67,27 @@ const userSchema = new mongoose.Schema({
 userSchema.index({ email: 1 });
 userSchema.index({ role: 1 });
 
-// Hash password before saving
+// Encrypt password using bcrypt
 userSchema.pre('save', async function(next) {
-  try {
-    // Only hash the password if it has been modified or is new
-    if (!this.isModified('password')) return next();
-
-    // Generate a strong salt
-    const salt = await bcrypt.genSalt(SALT_WORK_FACTOR);
-    
-    // Hash the password along with the new salt
-    const hash = await bcrypt.hash(this.password, salt);
-    
-    // Override the cleartext password with the hashed one
-    this.password = hash;
-    
-    // If password is changed, update passwordChangedAt
-    this.passwordChangedAt = Date.now() - 1000; // Subtract 1 second for safety
-    
+  if (!this.isModified('password')) {
     next();
-  } catch (error) {
-    next(error);
   }
+
+  const salt = await bcrypt.genSalt(SALT_WORK_FACTOR);
+  this.password = await bcrypt.hash(this.password, salt);
 });
+
+// Sign JWT and return
+userSchema.methods.getSignedJwtToken = function() {
+  return jwt.sign({ id: this._id }, process.env.JWT_SECRET, {
+    expiresIn: '30d'
+  });
+};
+
+// Match user entered password to hashed password in database
+userSchema.methods.matchPassword = async function(enteredPassword) {
+  return await bcrypt.compare(enteredPassword, this.password);
+};
 
 // Verify password method
 userSchema.methods.comparePassword = async function(candidatePassword) {
@@ -156,22 +149,6 @@ userSchema.methods.resetLoginAttempts = async function() {
   this.loginAttempts = 0;
   this.lockUntil = null;
   await this.save();
-};
-
-// Generate JWT token
-userSchema.methods.generateToken = function() {
-  return jwt.sign(
-    { 
-      _id: this._id, 
-      role: this.role,
-      version: this.passwordChangedAt ? this.passwordChangedAt.getTime() : 'v1'
-    },
-    process.env.JWT_SECRET,
-    { 
-      expiresIn: process.env.JWT_EXPIRES_IN || '1d',
-      algorithm: 'HS256'
-    }
-  );
 };
 
 // Check if password was changed after token was issued
