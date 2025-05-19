@@ -27,7 +27,8 @@ const createBooking = async (req, res) => {
       customerPhone: customer.phone,
       vendorName: vendor.businessName,
       vendorService: vendor.serviceCategory,
-      status: 'pending'
+      status: 'pending',
+      lastUpdatedBy: 'customer'
     };
 
     const booking = await Booking.create(bookingData);
@@ -119,7 +120,16 @@ const getBookingById = async (req, res) => {
 // Update booking status
 const updateBooking = async (req, res) => {
   try {
-    const { status, vendorResponse, messageType } = req.body;
+    const { 
+      status, 
+      vendorResponse, 
+      messageType,
+      paymentStatus,
+      paymentAmount,
+      completionNotes,
+      cancellationReason
+    } = req.body;
+    
     const booking = await Booking.findById(req.params.id);
 
     if (!booking) {
@@ -153,8 +163,25 @@ const updateBooking = async (req, res) => {
 
     // Update the booking
     const updateData = {};
+    
     if (status) {
       updateData.status = status;
+      updateData.lastUpdatedBy = vendor ? 'vendor' : 'customer';
+      
+      if (status === 'cancelled') {
+        updateData.cancellationReason = cancellationReason;
+        updateData.cancellationDate = new Date();
+      } else if (status === 'completed') {
+        updateData.completionNotes = completionNotes;
+      }
+    }
+    
+    if (paymentStatus) {
+      updateData.paymentStatus = paymentStatus;
+    }
+    
+    if (paymentAmount) {
+      updateData.paymentAmount = paymentAmount;
     }
     
     // Handle vendor response
@@ -165,7 +192,7 @@ const updateBooking = async (req, res) => {
         const messageHistory = booking.messageHistory || [];
         messageHistory.push({
           message: vendorResponse,
-          sender: 'vendor',
+          sender: vendor ? 'vendor' : 'customer',
           timestamp: new Date()
         });
         updateData.messageHistory = messageHistory;
@@ -193,6 +220,7 @@ const updateBooking = async (req, res) => {
 // Cancel booking
 const cancelBooking = async (req, res) => {
   try {
+    const { cancellationReason } = req.body;
     const booking = await Booking.findById(req.params.id);
 
     if (!booking) {
@@ -215,12 +243,63 @@ const cancelBooking = async (req, res) => {
     }
 
     booking.status = 'cancelled';
+    booking.cancellationReason = cancellationReason;
+    booking.cancellationDate = new Date();
+    booking.lastUpdatedBy = 'customer';
     await booking.save();
 
     res.json(booking);
   } catch (err) {
     console.error('Error cancelling booking:', err);
     res.status(500).json({ error: 'Failed to cancel booking' });
+  }
+};
+
+// Get booking statistics
+const getBookingStats = async (req, res) => {
+  try {
+    const vendor = await Vendor.findOne({ userId: req.user._id });
+    if (!vendor) {
+      return res.status(404).json({ error: 'Vendor profile not found' });
+    }
+
+    const stats = await Booking.aggregate([
+      { $match: { vendorId: vendor._id } },
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 },
+          totalRevenue: {
+            $sum: {
+              $cond: [
+                { $in: ['$status', ['confirmed', 'completed']] },
+                '$budget',
+                0
+              ]
+            }
+          }
+        }
+      }
+    ]);
+
+    const totalBookings = await Booking.countDocuments({ vendorId: vendor._id });
+    const upcomingBookings = await Booking.find({
+      vendorId: vendor._id,
+      status: { $in: ['pending', 'confirmed'] },
+      eventDate: { $gte: new Date() }
+    })
+    .sort({ eventDate: 1 })
+    .limit(5)
+    .populate('customerId', 'fullName email');
+
+    res.json({
+      stats,
+      totalBookings,
+      upcomingBookings
+    });
+  } catch (err) {
+    console.error('Error fetching booking stats:', err);
+    res.status(500).json({ error: 'Failed to fetch booking statistics' });
   }
 };
 
@@ -231,5 +310,6 @@ module.exports = {
   updateBooking,
   getCustomerBookings,
   getVendorBookings,
-  cancelBooking
+  cancelBooking,
+  getBookingStats
 };

@@ -53,7 +53,17 @@ const userSchema = new mongoose.Schema({
   preferences: {
     type: Object,
     default: {}
-  }
+  },
+  profilePicture: {
+    url: String,
+    thumbnail: String,
+    deleteUrl: String
+  },
+  isVerified: {
+    type: Boolean,
+    default: false
+  },
+  verificationToken: String
 }, { 
   timestamps: true 
 });

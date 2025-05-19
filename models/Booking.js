@@ -78,6 +78,36 @@ const bookingSchema = new mongoose.Schema({
   vendorService: {
     type: String,
     required: true
+  },
+  // Additional fields for better management
+  eventLocation: {
+    type: String
+  },
+  specialRequirements: {
+    type: String
+  },
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'partial', 'completed'],
+    default: 'pending'
+  },
+  paymentAmount: {
+    type: Number,
+    default: 0
+  },
+  lastUpdatedBy: {
+    type: String,
+    enum: ['customer', 'vendor', 'system'],
+    default: 'system'
+  },
+  cancellationReason: {
+    type: String
+  },
+  cancellationDate: {
+    type: Date
+  },
+  completionNotes: {
+    type: String
   }
 }, { 
   timestamps: true 
@@ -87,5 +117,7 @@ const bookingSchema = new mongoose.Schema({
 bookingSchema.index({ customerId: 1, status: 1 });
 bookingSchema.index({ vendorId: 1, status: 1 });
 bookingSchema.index({ eventDate: 1 });
+bookingSchema.index({ status: 1 });
+bookingSchema.index({ paymentStatus: 1 });
 
 module.exports = mongoose.model('Booking', bookingSchema);
