@@ -2,7 +2,7 @@ services:
   - type: web
     name: shaadisetgo-backend
     env: node
-    buildCommand: npm install
+    buildCommand: npm install && npm install axios
     startCommand: node server.js
     envVars:
       - key: NODE_ENV
