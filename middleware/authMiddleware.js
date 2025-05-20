@@ -7,6 +7,18 @@ const User = require('../models/User');
  * @param {Object} res - Express response object
  * @param {Function} next - Express next middleware function
  */
+const authorize = (role) => {
+  return (req, res, next) => {
+    if (req.user && req.user.role === role) {
+      return next();
+    }
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. Insufficient permissions.'
+    });
+  };
+};
+
 const verifyToken = async (req, res, next) => {
   try {
     // Check for token in Authorization header or secure cookie
@@ -62,4 +74,4 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
-module.exports = { verifyToken };
+module.exports = { verifyToken, authorize };
