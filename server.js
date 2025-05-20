@@ -81,12 +81,14 @@ connectDB();
 // Import routes
 try {
   const authRoutes = require('./routes/authRoutes');
+  const userRoutes = require('./routes/userRoutes');
   const vendorRoutes = require('./routes/vendorRoutes');
   const bookingRoutes = require('./routes/bookingRoutes');
   const favoriteRoutes = require('./routes/favoriteRoutes');
 
   // Routes
   app.use('/api/auth', authRoutes);
+  app.use('/api/users', userRoutes);
   app.use('/api/vendors', vendorRoutes);
   app.use('/api/bookings', bookingRoutes);
   app.use('/api/favorites', favoriteRoutes);
