@@ -12,8 +12,13 @@ const updateBookingStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
 
-    if (booking.userId.toString() !== req.user.userId) {
-      return res.status(403).json({ success: false, message: 'Not authorized' });
+    // Verify vendor is associated with this booking
+    const vendor = await Vendor.findOne({ userId: req.user.userId });
+    if (!vendor) {
+      return res.status(403).json({ success: false, message: 'Vendor profile not found' });
+    }
+    if (!vendor._id.equals(booking.vendorId)) {
+      return res.status(403).json({ success: false, message: 'Not authorized for this booking' });
     }
 
     booking.status = req.body.status;
