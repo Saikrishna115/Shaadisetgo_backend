@@ -298,7 +298,6 @@ router.get('/user/:userId', verifyToken, getVendorByUserId);
 router.post('/', verifyToken, createVendor);
 // Public routes
 router.get('/', getVendors);
-router.get('/:id', getVendorById);
 router.put('/:id', verifyToken, updateVendor);
 router.delete('/:id', verifyToken, deleteVendor);
 
