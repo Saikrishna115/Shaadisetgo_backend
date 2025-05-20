@@ -18,6 +18,7 @@ router.get('/', protect, authorize('admin'), getBookings);
 // Vendor routes
 router.get('/vendor', protect, authorize('vendor'), getVendorBookings);
 router.get('/stats', protect, authorize('vendor'), getBookingStats);
+router.put('/:id/status', protect, authorize('customer'), updateBookingStatus);
 
 // Customer routes
 router.put('/:id/status', protect, authorize('vendor'), async (req, res) => {
