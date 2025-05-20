@@ -255,57 +255,66 @@ const cancelBooking = async (req, res) => {
   }
 };
 
-// Get booking statistics
+// Get booking statistics for vendor
 const getBookingStats = async (req, res) => {
   try {
+    // Find the vendor document for the current user
     const vendor = await Vendor.findOne({ userId: req.user._id });
     if (!vendor) {
-      return res.status(404).json({ error: 'Vendor profile not found' });
+      return res.status(404).json({ 
+        success: false,
+        message: 'Vendor profile not found' 
+      });
     }
 
-    const stats = await Booking.aggregate([
+    // Get total bookings
+    const totalBookings = await Booking.countDocuments({ vendorId: vendor._id });
+
+    // Get bookings by status
+    const bookingsByStatus = await Booking.aggregate([
       { $match: { vendorId: vendor._id } },
-      {
-        $group: {
-          _id: '$status',
-          count: { $sum: 1 },
-          totalRevenue: {
-            $sum: {
-              $cond: [
-                { $in: ['$status', ['confirmed', 'completed']] },
-                '$budget',
-                0
-              ]
-            }
-          }
-        }
-      }
+      { $group: { _id: '$status', count: { $sum: 1 } } }
     ]);
 
-    const totalBookings = await Booking.countDocuments({ vendorId: vendor._id });
-    const upcomingBookings = await Booking.find({
+    // Get recent bookings (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const recentBookings = await Booking.countDocuments({
       vendorId: vendor._id,
-      status: { $in: ['pending', 'confirmed'] },
-      eventDate: { $gte: new Date() }
-    })
-    .sort({ eventDate: 1 })
-    .limit(5)
-    .populate('customerId', 'fullName email');
+      createdAt: { $gte: thirtyDaysAgo }
+    });
+
+    // Calculate average rating
+    const ratings = await Booking.aggregate([
+      { $match: { vendorId: vendor._id, rating: { $exists: true } } },
+      { $group: { _id: null, averageRating: { $avg: '$rating' } } }
+    ]);
 
     res.json({
-      stats,
-      totalBookings,
-      upcomingBookings
+      success: true,
+      stats: {
+        totalBookings,
+        bookingsByStatus: bookingsByStatus.reduce((acc, curr) => {
+          acc[curr._id] = curr.count;
+          return acc;
+        }, {}),
+        recentBookings,
+        averageRating: ratings[0]?.averageRating || 0
+      }
     });
-  } catch (err) {
-    console.error('Error fetching booking stats:', err);
-    res.status(500).json({ error: 'Failed to fetch booking statistics' });
+  } catch (error) {
+    console.error('Error fetching booking stats:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Error fetching booking statistics',
+      error: error.message 
+    });
   }
 };
 
 module.exports = {
   createBooking,
-  getBookings: getCustomerBookings, // Default to customer bookings for backward compatibility
+  getBookings,
   getBookingById,
   updateBooking,
   getCustomerBookings,
