@@ -22,7 +22,7 @@ router.get('/stats', protect, authorize('vendor'), getBookingStats);
 router.put('/:id/status', protect, authorize('customer'), updateBookingStatus);
 
 // Customer routes
-router.put('/:id/status', protect, authorize('vendor'), async (req, res) => {
+router.put('/:id/vendor-status', protect, authorize('vendor'), async (req, res) => {
   try {
     const booking = await Booking.findByIdAndUpdate(
       req.params.id,
