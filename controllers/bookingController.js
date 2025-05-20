@@ -373,7 +373,48 @@ const getBookingStats = async (req, res) => {
   }
 };
 
+const Booking = require('../models/Booking');
+const Vendor = require('../models/Vendor');
+
+const updateVendorStatus = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    // Verify vendor is associated with this booking
+    const vendor = await Vendor.findOne({ userId: req.user.userId });
+    if (!vendor._id.equals(booking.vendorId)) {
+      return res.status(403).json({ success: false, message: 'Not authorized for this booking' });
+    }
+
+    booking.status = req.body.status;
+    if (req.body.status === 'rejected') {
+      booking.vendorResponse = req.body.vendorResponse || 'Booking rejected by vendor';
+    }
+
+    await booking.save();
+    
+    res.json({
+      success: true,
+      message: 'Booking status updated successfully',
+      data: booking
+    });
+
+  } catch (error) {
+    console.error('Error updating vendor status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update booking status',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
+  updateVendorStatus,
   updateBookingStatus,
   createBooking,
   getBookings,

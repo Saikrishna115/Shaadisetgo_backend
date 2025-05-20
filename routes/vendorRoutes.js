@@ -15,7 +15,14 @@ const {
   updateVendorAvailability,
   updateVendorSettings
 } = require('../controllers/vendorController');
-const { updateBooking } = require('../controllers/bookingController');
+const { updateBooking, updateVendorStatus } = require('../controllers/bookingController');
+
+// Vendor booking status updates
+router.put('/:id/vendor-status',
+  protect,
+  authorize('vendor'),
+  updateVendorStatus
+);
 const Vendor = require('../models/Vendor');
 const { authenticateToken: protect, authorize } = require('../middleware/auth');
 const Booking = require('../models/Booking');
