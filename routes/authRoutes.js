@@ -68,13 +68,19 @@ router.post('/login', async (req, res) => {
     // Check if user exists
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ 
+        success: false,
+        message: 'Invalid credentials' 
+      });
     }
 
     // Verify password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ 
+        success: false,
+        message: 'Invalid credentials' 
+      });
     }
 
     // Generate token
@@ -85,6 +91,7 @@ router.post('/login', async (req, res) => {
     );
 
     res.json({
+      success: true,
       token,
       user: {
         id: user._id,
@@ -95,7 +102,10 @@ router.post('/login', async (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ message: 'Error logging in' });
+    res.status(500).json({ 
+      success: false,
+      message: 'Error logging in' 
+    });
   }
 });
 
