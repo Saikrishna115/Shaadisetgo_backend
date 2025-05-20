@@ -83,11 +83,13 @@ try {
   const authRoutes = require('./routes/authRoutes');
   const vendorRoutes = require('./routes/vendorRoutes');
   const bookingRoutes = require('./routes/bookingRoutes');
+  const favoriteRoutes = require('./routes/favoriteRoutes');
 
   // Routes
   app.use('/api/auth', authRoutes);
   app.use('/api/vendors', vendorRoutes);
   app.use('/api/bookings', bookingRoutes);
+  app.use('/api/favorites', favoriteRoutes);
 
   // Add a test route to verify routing is working
   app.get('/api/test', (req, res) => {
