@@ -375,16 +375,29 @@ const getBookingStats = async (req, res) => {
 
 const updateVendorStatus = async (req, res) => {
   try {
+    console.log('Attempting to update booking status:', { bookingId: req.params.id, userId: req.user.userId });
     const booking = await Booking.findById(req.params.id);
     
     if (!booking) {
+      console.error('Booking not found:', req.params.id);
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
 
     // Verify vendor is associated with this booking
     const vendor = await Vendor.findOne({ userId: req.user.userId });
+    if (!vendor) {
+      console.error('Vendor not found for user:', req.user.userId);
+      return res.status(403).json({ success: false, message: 'Vendor profile not found' });
+    }
     if (!vendor._id.equals(booking.vendorId)) {
+      console.error('Vendor not authorized for booking:', { vendorId: vendor._id, bookingVendorId: booking.vendorId });
       return res.status(403).json({ success: false, message: 'Not authorized for this booking' });
+    }
+
+    // Validate status
+    if (!['confirmed', 'rejected', 'completed'].includes(req.body.status)) {
+      console.error('Invalid status:', req.body.status);
+      return res.status(400).json({ success: false, message: 'Invalid status value' });
     }
 
     booking.status = req.body.status;
@@ -392,13 +405,22 @@ const updateVendorStatus = async (req, res) => {
       booking.vendorResponse = req.body.vendorResponse || 'Booking rejected by vendor';
     }
 
-    await booking.save();
-    
-    res.json({
-      success: true,
-      message: 'Booking status updated successfully',
-      data: booking
-    });
+    try {
+      await booking.save();
+      console.log('Booking status updated successfully:', { bookingId: booking._id, newStatus: booking.status });
+      res.json({
+        success: true,
+        message: 'Booking status updated successfully',
+        data: booking
+      });
+    } catch (saveError) {
+      console.error('Error saving booking:', { bookingId: booking._id, error: saveError });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to save booking updates',
+        error: saveError.message
+      });
+    }
 
   } catch (error) {
     console.error('Error updating vendor status:', error);
