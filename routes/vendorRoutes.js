@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { verifyToken } = require('../middleware/authMiddleware');
+const { verifyToken: protect } = require('../middleware/authMiddleware');
 const {
   createVendor,
   getVendors,
@@ -25,7 +25,7 @@ router.put('/:id/vendor-status',
   updateVendorStatus
 );
 const Vendor = require('../models/Vendor');
-const { authenticateToken: protect, authorize } = require('../middleware/auth');
+
 const Booking = require('../models/Booking');
 
 // Protected routes - require authentication
