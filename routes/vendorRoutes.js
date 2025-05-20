@@ -295,7 +295,7 @@ router.put('/admin/:id/status', verifyToken, updateVendorStatus);
 
 // User-specific routes
 router.get('/user/:userId', verifyToken, getVendorByUserId);
-
+router.post('/', verifyToken, createVendor);
 // Public routes
 router.get('/', getVendors);
 router.get('/:id', getVendorById);
