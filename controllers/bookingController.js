@@ -48,9 +48,13 @@ const createBooking = async (req, res) => {
 // Get all bookings
 const getBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find();
+    const bookings = await Booking.find()
+      .populate('customerId', 'fullName email phone')
+      .populate('vendorId', 'businessName serviceCategory location priceRange')
+      .sort({ createdAt: -1 });
     res.json(bookings);
   } catch (err) {
+    console.error('Error fetching all bookings:', err);
     res.status(500).json({ error: 'Failed to fetch bookings' });
   }
 };
