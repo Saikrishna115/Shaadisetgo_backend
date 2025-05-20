@@ -70,8 +70,8 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Check if user exists
-    const user = await User.findOne({ email });
+    // Check if user exists and explicitly select password field
+    const user = await User.findOne({ email }).select('+password');
     if (!user) {
       return res.status(401).json({ 
         success: false,
@@ -95,21 +95,25 @@ router.post('/login', async (req, res) => {
       { expiresIn: '24h' }
     );
 
+    // Remove password from response
+    const userResponse = {
+      id: user._id,
+      email: user.email,
+      role: user.role,
+      fullName: user.fullName
+    };
+
     res.json({
       success: true,
       token,
-      user: {
-        id: user._id,
-        email: user.email,
-        role: user.role,
-        fullName: user.fullName
-      }
+      user: userResponse
     });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ 
       success: false,
-      message: 'Error logging in' 
+      message: 'Error logging in',
+      error: error.message 
     });
   }
 });
