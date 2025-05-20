@@ -15,15 +15,13 @@ const { authenticateToken: protect, authorize } = require('../middleware/auth');
 // Admin routes
 router.get('/', protect, authorize('admin'), getBookings);
 
-// Public routes
+// Vendor routes
+router.get('/vendor', protect, authorize('vendor'), getVendorBookings);
 router.get('/stats', protect, authorize('vendor'), getBookingStats);
 
 // Customer routes
 router.post('/', protect, authorize('customer'), createBooking);
 router.get('/customer', protect, authorize('customer'), getCustomerBookings);
-
-// Vendor routes
-router.get('/vendor', protect, authorize('vendor'), getVendorBookings);
 
 // Parameterized routes (must come after specific routes)
 router.get('/:id', protect, getBookingById);
