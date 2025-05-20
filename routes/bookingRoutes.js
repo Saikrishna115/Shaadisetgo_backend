@@ -8,7 +8,8 @@ const {
   getCustomerBookings,
   getVendorBookings,
   cancelBooking,
-  getBookingStats
+  getBookingStats,
+  updateBookingStatus
 } = require('../controllers/bookingController');
 const { authenticateToken: protect, authorize } = require('../middleware/auth');
 
