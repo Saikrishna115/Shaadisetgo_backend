@@ -23,7 +23,7 @@ const authenticateToken = (req, res, next) => {
 };
 
 // Grant access to specific roles
-const authorizeRoles = (...roles) => {
+const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ message: 'Access denied. No token provided.' });
@@ -41,5 +41,5 @@ const authorizeRoles = (...roles) => {
 
 module.exports = {
   authenticateToken,
-  authorizeRoles
+  authorize
 }; 
