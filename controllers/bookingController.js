@@ -2,6 +2,8 @@
 const Booking = require('../models/Booking');
 const Vendor = require('../models/Vendor');
 const User = require('../models/User');
+const Notification = require('../models/Notification');
+const { sendEmail } = require('../utils/email');
 
 // Create a booking
 const calculateBookingStats = async (vendorId) => {
@@ -43,6 +45,35 @@ const updateBookingStatus = async (req, res) => {
 
     booking.status = req.body.status;
     await booking.save();
+
+    // Notify customer about status change
+    const customer = await User.findById(booking.customerId);
+    if (customer) {
+      const notification = {
+        userId: customer._id,
+        message: `Your booking with ${vendor.businessName} has been ${req.body.status}`,
+        type: 'booking-status',
+        bookingId: booking._id,
+        status: req.body.status
+      };
+      await Notification.create(notification);
+
+      // Send email notification
+      const emailContent = `Dear ${customer.fullName},
+
+Your booking with ${vendor.businessName} has been ${req.body.status}.
+
+Booking Details:
+Service: ${vendor.serviceCategory}
+Date: ${booking.bookingDate}
+
+Thank you for using our services.
+
+Best regards,
+ShaadiSetGo Team`;
+
+      await sendEmail(customer.email, 'Booking Status Update', emailContent);
+    }
 
     const stats = await calculateBookingStats(booking.vendorId);
 
