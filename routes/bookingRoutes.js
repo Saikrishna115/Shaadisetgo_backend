@@ -10,7 +10,7 @@ const {
   cancelBooking,
   getBookingStats
 } = require('../controllers/bookingController');
-const { protect, authorize } = require('../middleware/auth');
+const { authenticateToken: protect, authorize } = require('../middleware/auth');
 
 // Admin routes
 router.get('/', protect, authorize('admin'), getBookings);
