@@ -373,9 +373,6 @@ const getBookingStats = async (req, res) => {
   }
 };
 
-const Booking = require('../models/Booking');
-const Vendor = require('../models/Vendor');
-
 const updateVendorStatus = async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id);
