@@ -94,7 +94,11 @@ try {
   app.use('/api/favorites', favoriteRoutes);
 
   // Add a test route to verify routing is working
-  app.get('/api/test', (req, res) => {
+  // Booking routes
+const bookingRoutes = require('./routes/bookingRoutes');
+app.use('/api/bookings', bookingRoutes);
+
+app.get('/api/test', (req, res) => {
     res.json({ message: 'API is working' });
   });
 } catch (error) {
