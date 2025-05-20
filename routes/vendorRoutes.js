@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { verifyToken: protect, authorize } = require('../middleware/authMiddleware');
+const { verifyToken, authorize } = require('../middleware/authMiddleware');
+const protect = verifyToken;
 const {
   createVendor,
   getVendors,
