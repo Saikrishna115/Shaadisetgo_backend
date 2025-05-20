@@ -25,4 +25,7 @@ router.delete('/:id', protect, authorize('customer'), cancelBooking);
 // Vendor routes
 router.get('/vendor', protect, authorize('vendor'), getVendorBookings);
 
+// Admin routes
+router.get('/', protect, authorize('admin'), getBookings);
+
 module.exports = router; 
