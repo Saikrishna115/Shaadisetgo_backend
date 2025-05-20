@@ -83,7 +83,7 @@ try {
   const authRoutes = require('./routes/authRoutes');
   const userRoutes = require('./routes/userRoutes');
   const vendorRoutes = require('./routes/vendorRoutes');
-  // const bookingRoutes = require('./routes/bookingRoutes'); // Removed duplicate declaration
+  const bookingRoutes = require('./routes/bookingRoutes');
   const favoriteRoutes = require('./routes/favoriteRoutes');
 
   // Routes
@@ -95,8 +95,6 @@ try {
 
   // Add a test route to verify routing is working
   // Booking routes
-// const bookingRoutes = require('./routes/bookingRoutes'); // Removed duplicate declaration
-app.use('/api/bookings', bookingRoutes);
 
 app.get('/api/test', (req, res) => {
     res.json({ message: 'API is working' });
