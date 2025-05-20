@@ -15,7 +15,8 @@ const {
   updateVendorAvailability,
   updateVendorSettings
 } = require('../controllers/vendorController');
-const { updateBooking, updateVendorStatus } = require('../controllers/bookingController');
+const { updateBooking } = require('../controllers/bookingController'); // ✅ Only if needed
+
 
 // Vendor booking status updates
 router.put('/:id/vendor-status',
