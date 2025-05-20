@@ -262,7 +262,7 @@ const cancelBooking = async (req, res) => {
 // Get booking statistics for vendor
 const getBookingStats = async (req, res) => {
   try {
-    // Find the vendor document for the current user
+    // First find the vendor document for the current user
     const vendor = await Vendor.findOne({ userId: req.user._id });
     if (!vendor) {
       return res.status(404).json({ 
@@ -271,14 +271,29 @@ const getBookingStats = async (req, res) => {
       });
     }
 
-    // Get total bookings
-    const totalBookings = await Booking.countDocuments({ vendorId: vendor._id });
-
-    // Get bookings by status
-    const bookingsByStatus = await Booking.aggregate([
+    // Get booking statistics
+    const stats = await Booking.aggregate([
       { $match: { vendorId: vendor._id } },
-      { $group: { _id: '$status', count: { $sum: 1 } } }
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 },
+          totalRevenue: {
+            $sum: {
+              $cond: [
+                { $in: ['$status', ['confirmed', 'completed']] },
+                '$budget',
+                0
+              ]
+            }
+          }
+        }
+      }
     ]);
+
+    // Calculate total bookings and revenue
+    const totalBookings = stats.reduce((sum, stat) => sum + stat.count, 0);
+    const totalRevenue = stats.reduce((sum, stat) => sum + stat.totalRevenue, 0);
 
     // Get recent bookings (last 30 days)
     const thirtyDaysAgo = new Date();
@@ -296,14 +311,15 @@ const getBookingStats = async (req, res) => {
 
     res.json({
       success: true,
-      stats: {
+      data: {
         totalBookings,
-        bookingsByStatus: bookingsByStatus.reduce((acc, curr) => {
+        totalRevenue,
+        recentBookings,
+        averageRating: ratings[0]?.averageRating || 0,
+        bookingsByStatus: stats.reduce((acc, curr) => {
           acc[curr._id] = curr.count;
           return acc;
-        }, {}),
-        recentBookings,
-        averageRating: ratings[0]?.averageRating || 0
+        }, {})
       }
     });
   } catch (error) {
