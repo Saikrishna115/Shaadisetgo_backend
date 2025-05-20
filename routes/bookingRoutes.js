@@ -12,20 +12,22 @@ const {
 } = require('../controllers/bookingController');
 const { protect, authorize } = require('../middleware/auth');
 
+// Admin routes
+router.get('/', protect, authorize('admin'), getBookings);
+
 // Public routes
 router.get('/stats', protect, authorize('vendor'), getBookingStats);
 
 // Customer routes
 router.post('/', protect, authorize('customer'), createBooking);
 router.get('/customer', protect, authorize('customer'), getCustomerBookings);
-router.get('/:id', protect, getBookingById);
-router.put('/:id', protect, updateBooking);
-router.delete('/:id', protect, authorize('customer'), cancelBooking);
 
 // Vendor routes
 router.get('/vendor', protect, authorize('vendor'), getVendorBookings);
 
-// Admin routes
-router.get('/', protect, authorize('admin'), getBookings);
+// Parameterized routes (must come after specific routes)
+router.get('/:id', protect, getBookingById);
+router.put('/:id', protect, updateBooking);
+router.delete('/:id', protect, authorize('customer'), cancelBooking);
 
 module.exports = router; 
