@@ -139,12 +139,27 @@ router.get('/me', authenticateToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select('-password');
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ 
+        success: false,
+        message: 'User not found' 
+      });
     }
-    res.json(user);
+    res.json({
+      success: true,
+      data: {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+        fullName: user.fullName
+      }
+    });
   } catch (error) {
     console.error('Get user error:', error);
-    res.status(500).json({ message: 'Error fetching user data' });
+    res.status(500).json({ 
+      success: false,
+      message: 'Error fetching user data',
+      error: error.message 
+    });
   }
 });
 
