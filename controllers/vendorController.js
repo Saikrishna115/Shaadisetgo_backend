@@ -256,6 +256,7 @@ const getAdminVendors = async (req, res) => {
 
 // Update vendor status
 const updateVendorStatus = async (req, res) => {
+module.exports.updateVendorStatus = updateVendorStatus;
   try {
     const vendor = await Vendor.findByIdAndUpdate(
       req.params.id,
