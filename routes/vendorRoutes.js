@@ -15,6 +15,7 @@ const {
   updateVendorAvailability,
   updateVendorSettings
 } = require('../controllers/vendorController');
+const { updateBooking } = require('../controllers/bookingController');
 const Vendor = require('../models/Vendor');
 const { authenticateToken: protect, authorize } = require('../middleware/auth');
 const Booking = require('../models/Booking');
@@ -87,6 +88,123 @@ router.put('/profile', protect, authorize('vendor'), async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating vendor profile',
+      error: error.message
+    });
+  }
+});
+
+// Vendor booking actions
+router.put('/bookings/:id/accept', protect, authorize('vendor'), async (req, res) => {
+  try {
+    const vendor = await Vendor.findOne({ userId: req.user.userId });
+    if (!vendor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vendor profile not found'
+      });
+    }
+
+    // Update booking status to confirmed
+    req.body.status = 'confirmed';
+    await updateBooking(req, res);
+  } catch (error) {
+    console.error('Error accepting booking:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error accepting booking',
+      error: error.message
+    });
+  }
+});
+
+router.put('/bookings/:id/reject', protect, authorize('vendor'), async (req, res) => {
+  try {
+    const vendor = await Vendor.findOne({ userId: req.user.userId });
+    if (!vendor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vendor profile not found'
+      });
+    }
+
+    // Update booking status to rejected
+    req.body.status = 'rejected';
+    await updateBooking(req, res);
+  } catch (error) {
+    console.error('Error rejecting booking:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error rejecting booking',
+      error: error.message
+    });
+  }
+});
+
+router.put('/bookings/:id/complete', protect, authorize('vendor'), async (req, res) => {
+  try {
+    const vendor = await Vendor.findOne({ userId: req.user.userId });
+    if (!vendor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vendor profile not found'
+      });
+    }
+
+    // Update booking status to completed
+    req.body.status = 'completed';
+    await updateBooking(req, res);
+  } catch (error) {
+    console.error('Error completing booking:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error completing booking',
+      error: error.message
+    });
+  }
+});
+
+// Get detailed customer information for a booking
+router.get('/bookings/:id/customer', protect, authorize('vendor'), async (req, res) => {
+  try {
+    const vendor = await Vendor.findOne({ userId: req.user.userId });
+    if (!vendor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vendor profile not found'
+      });
+    }
+
+    const booking = await Booking.findById(req.params.id)
+      .populate('customerId', 'fullName email phone address preferences')
+      .populate('vendorId', 'businessName serviceCategory');
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found'
+      });
+    }
+
+    // Verify that the booking belongs to this vendor
+    if (booking.vendorId._id.toString() !== vendor._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to view this booking'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        booking,
+        customer: booking.customerId
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching customer details:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching customer details',
       error: error.message
     });
   }

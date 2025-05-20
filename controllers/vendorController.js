@@ -118,14 +118,65 @@ const getVendors = async (req, res) => {
   }
 };
 
-// Get a specific vendor by vendor ID
+// Get a specific vendor by vendor ID with complete details
 const getVendorById = async (req, res) => {
   try {
-    const vendor = await Vendor.findById(req.params.id);
-    if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
-    res.status(200).json(vendor);
+    const vendor = await Vendor.findById(req.params.id)
+      .populate('userId', 'email')
+      .populate({
+        path: 'reviews',
+        populate: {
+          path: 'customerId',
+          select: 'fullName'
+        }
+      });
+
+    if (!vendor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vendor not found'
+      });
+    }
+
+    // Get vendor's booking statistics
+    const bookingStats = await Booking.aggregate([
+      { $match: { vendorId: vendor._id } },
+      { $group: {
+        _id: null,
+        totalBookings: { $sum: 1 },
+        completedBookings: { 
+          $sum: { 
+            $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] 
+          }
+        },
+        cancelledBookings: { 
+          $sum: { 
+            $cond: [{ $eq: ['$status', 'cancelled'] }, 1, 0] 
+          }
+        }
+      }}
+    ]);
+
+    const vendorDetails = {
+      ...vendor.toObject(),
+      statistics: bookingStats[0] || {
+        totalBookings: 0,
+        completedBookings: 0,
+        cancelledBookings: 0
+      }
+    };
+
+    res.status(200).json({
+      success: true,
+      data: vendorDetails
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching vendor', error });
+    console.error('Error fetching vendor details:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching vendor details',
+      error: error.message
+    });
   }
 };
 

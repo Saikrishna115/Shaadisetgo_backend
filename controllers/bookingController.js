@@ -131,7 +131,9 @@ const updateBooking = async (req, res) => {
       paymentStatus,
       paymentAmount,
       completionNotes,
-      cancellationReason
+      cancellationReason,
+      rating,
+      review
     } = req.body;
     
     const booking = await Booking.findById(req.params.id);
@@ -177,6 +179,15 @@ const updateBooking = async (req, res) => {
         updateData.cancellationDate = new Date();
       } else if (status === 'completed') {
         updateData.completionNotes = completionNotes;
+        // Add completion date when marking as completed
+        updateData.completionDate = new Date();
+      } else if (status === 'confirmed') {
+        // Add confirmation date when vendor accepts booking
+        updateData.confirmationDate = new Date();
+      } else if (status === 'rejected') {
+        // Add rejection date and reason when vendor rejects booking
+        updateData.rejectionDate = new Date();
+        updateData.rejectionReason = vendorResponse;
       }
     }
     
