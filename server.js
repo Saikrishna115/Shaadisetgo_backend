@@ -88,8 +88,14 @@ try {
   app.use('/api/auth', authRoutes);
   app.use('/api/vendors', vendorRoutes);
   app.use('/api/bookings', bookingRoutes);
+
+  // Add a test route to verify routing is working
+  app.get('/api/test', (req, res) => {
+    res.json({ message: 'API is working' });
+  });
 } catch (error) {
-  console.warn('Some routes are not available yet:', error.message);
+  console.error('Error loading routes:', error);
+  process.exit(1);
 }
 
 // Health check endpoint

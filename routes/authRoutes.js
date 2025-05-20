@@ -5,6 +5,11 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const { authenticateToken } = require('../middleware/auth');
 
+// Test route to verify routing is working
+router.get('/test', (req, res) => {
+  res.json({ message: 'Auth routes are working' });
+});
+
 /**
  * @route   POST /api/auth/register
  * @desc    Register a new user
