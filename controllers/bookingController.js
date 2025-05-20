@@ -4,6 +4,26 @@ const Vendor = require('../models/Vendor');
 const User = require('../models/User');
 
 // Create a booking
+const calculateBookingStats = async (vendorId) => {
+  try {
+    const totalBookings = await Booking.countDocuments({ vendorId });
+    const acceptedBookings = await Booking.countDocuments({ vendorId, status: 'confirmed' });
+    const rejectedBookings = await Booking.countDocuments({ vendorId, status: 'rejected' });
+    const pendingBookings = await Booking.countDocuments({ vendorId, status: 'pending' });
+
+    return {
+      total: totalBookings,
+      accepted: acceptedBookings,
+      rejected: rejectedBookings,
+      pending: pendingBookings,
+      acceptanceRate: totalBookings > 0 ? (acceptedBookings / totalBookings) * 100 : 0,
+      rejectionRate: totalBookings > 0 ? (rejectedBookings / totalBookings) * 100 : 0
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
 const updateBookingStatus = async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id);
@@ -24,9 +44,12 @@ const updateBookingStatus = async (req, res) => {
     booking.status = req.body.status;
     await booking.save();
 
+    const stats = await calculateBookingStats(booking.vendorId);
+
     res.status(200).json({ 
       success: true, 
       data: booking,
+      stats: stats,
       message: 'Booking status updated successfully' 
     });
 
