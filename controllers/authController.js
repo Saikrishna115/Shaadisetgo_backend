@@ -37,7 +37,7 @@ const register = async (req, res, next) => {
     const { fullName, email, password, role, phone } = req.body;
 
     // Validate required fields
-    const requiredFields = ['fullName', 'email', 'password', 'phone'];
+    const requiredFields = ['fullName', 'email', 'password', 'phone', 'role'];
     const missingFields = requiredFields.filter(field => !req.body[field]);
     if (missingFields.length > 0) {
       return res.status(400).json({
@@ -85,11 +85,24 @@ const register = async (req, res, next) => {
 
     // Validate role
     const validRoles = ['customer', 'vendor'];
-    if (role && !validRoles.includes(role)) {
+    if (!role || !validRoles.includes(role)) {
       return res.status(400).json({
         success: false,
         message: ERROR_MESSAGES.INVALID_ROLE
       });
+    }
+
+    // Validate vendor-specific fields
+    if (role === 'vendor') {
+      const vendorFields = ['businessName', 'ownerName', 'serviceCategory', 'address', 'city', 'state', 'zipCode'];
+      const missingVendorFields = vendorFields.filter(field => !req.body[field]);
+      if (missingVendorFields.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required vendor fields',
+          fields: missingVendorFields
+        });
+      }
     }
 
     // Create new user with enhanced security
@@ -98,13 +111,30 @@ const register = async (req, res, next) => {
       email: email.toLowerCase(),
       password,
       role: role || 'customer',
-      phone,
+      phone: phone.trim(),
+      ...(role === 'vendor' && { vendorDetails: req.body.vendorDetails }),
       lastLogin: new Date(),
       loginAttempts: 0
     });
 
     // Generate token
     const token = generateToken(user._id, user.role, user.passwordChangedAt?.getTime());
+
+    // Create vendor profile if role is vendor
+    if (role === 'vendor') {
+      await Vendor.create({
+        userId: user._id,
+        businessName: req.body.businessName,
+        ownerName: req.body.ownerName,
+        email: user.email,
+        phone: user.phone,
+        serviceCategory: req.body.serviceCategory,
+        address: req.body.address,
+        city: req.body.city,
+        state: req.body.state,
+        zipCode: req.body.zipCode
+      });
+    }
 
     // Log successful registration
     console.log('User registered successfully:', {
