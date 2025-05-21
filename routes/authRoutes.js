@@ -20,8 +20,50 @@ router.post('/register', async (req, res) => {
     const { email, password, role, fullName, phone, businessName, ownerName, serviceCategory, address, city, state, zipCode } = req.body;
 
     // Validate required fields
-    if (!fullName || !phone) {
-      return res.status(400).json({ message: 'Please provide full name and phone number' });
+    const requiredFields = ['fullName', 'email', 'password', 'phone', 'role'];
+    const missingFields = requiredFields.filter(field => !req.body[field]);
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields',
+        fields: missingFields
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid email format'
+      });
+    }
+
+    // Validate password strength
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 8 characters long and contain uppercase, lowercase, number and special character'
+      });
+    }
+
+    // Validate phone number
+    const phoneRegex = /^[0-9]{10}$/;
+    if (!phoneRegex.test(phone)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid phone number format'
+      });
+    }
+
+    // Validate role
+    const validRoles = ['customer', 'vendor'];
+    if (!role || !validRoles.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user role'
+      });
     }
 
     // Check if user already exists
