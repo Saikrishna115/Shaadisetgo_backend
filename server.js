@@ -21,20 +21,26 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5173',
   'https://shaadisetgo-frontend.vercel.app',
   'https://shaadisetgo.vercel.app'
 ];
 
-app.use(cors({
+// Development vs Production CORS settings
+const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
+    // Allow requests with no origin (like mobile apps, Postman, or curl requests)
+    if (!origin) {
+      return callback(null, true);
     }
-    return callback(null, true);
+
+    // Check if the origin is allowed
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
@@ -44,20 +50,16 @@ app.use(cors({
     'X-Requested-With',
     'Accept',
     'Origin',
-    'Cache-Control',
-    'X-CSRF-Token',
-    'X-Requested-With',
-    'Accept',
-    'Accept-Version',
-    'Content-Length',
-    'Content-MD5',
-    'Date',
-    'X-Api-Version'
+    'Cache-Control'
   ],
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
   maxAge: 86400 // 24 hours
-}));
+};
 
+// Apply CORS middleware with options
+app.use(cors(corsOptions));
+
+// Body parser middleware
 app.use(express.json());
 
 // MongoDB Connection
