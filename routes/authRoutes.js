@@ -17,7 +17,7 @@ router.get('/test', (req, res) => {
  */
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, role, fullName } = req.body;
+    const { email, password, role, fullName, phone, businessName, ownerName, serviceCategory, address, city, state, zipCode } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -34,7 +34,17 @@ router.post('/register', async (req, res) => {
       email,
       password: hashedPassword,
       role,
-      fullName
+      fullName,
+      phone,
+      ...(role === 'vendor' && {
+        businessName,
+        ownerName,
+        serviceCategory,
+        address,
+        city,
+        state,
+        zipCode
+      })
     });
 
     await user.save();
