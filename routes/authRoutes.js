@@ -19,6 +19,11 @@ router.post('/register', async (req, res) => {
   try {
     const { email, password, role, fullName, phone, businessName, ownerName, serviceCategory, address, city, state, zipCode } = req.body;
 
+    // Validate required fields
+    if (!fullName || !phone) {
+      return res.status(400).json({ message: 'Please provide full name and phone number' });
+    }
+
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
