@@ -5,10 +5,22 @@ const jwt = require('jsonwebtoken');
 const SALT_WORK_FACTOR = 12; // Increased from 10 to 12 for better security
 
 const userSchema = new mongoose.Schema({
+  firstName: {
+    type: String,
+    required: [true, 'Please provide your first name'],
+    trim: true
+  },
+  lastName: {
+    type: String,
+    required: [true, 'Please provide your last name'],
+    trim: true
+  },
   fullName: {
     type: String,
-    required: [true, 'Please provide your full name'],
-    trim: true
+    virtual: true,
+    get() {
+      return `${this.firstName} ${this.lastName}`;
+    }
   },
   email: {
     type: String,

@@ -34,10 +34,10 @@ const generateToken = (userId, role, passwordTimestamp) => {
 
 const register = async (req, res, next) => {
   try {
-    const { fullName, email, password, role, phone } = req.body;
+    const { firstName, lastName, email, password, role, phone } = req.body;
 
     // Validate required fields
-    const requiredFields = ['fullName', 'email', 'password', 'phone', 'role'];
+    const requiredFields = ['firstName', 'lastName', 'email', 'password', 'phone', 'role'];
     const missingFields = requiredFields.filter(field => !req.body[field]);
     if (missingFields.length > 0) {
       return res.status(400).json({
@@ -57,7 +57,7 @@ const register = async (req, res, next) => {
     }
 
     // Validate password strength
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9])[A-Za-z\d\W_]{8,}$/;
     if (!passwordRegex.test(password)) {
       return res.status(400).json({
         success: false,
@@ -107,7 +107,8 @@ const register = async (req, res, next) => {
 
     // Create new user with enhanced security
     const user = await User.create({
-      fullName: fullName.trim(),
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
       email: email.toLowerCase(),
       password,
       role: role || 'customer',
@@ -150,6 +151,8 @@ const register = async (req, res, next) => {
       data: {
         user: {
           id: user._id,
+          firstName: user.firstName,
+          lastName: user.lastName,
           fullName: user.fullName,
           email: user.email,
           role: user.role,
@@ -159,12 +162,11 @@ const register = async (req, res, next) => {
       }
     });
   } catch (error) {
-    console.error('Registration Error:', {
-      error: error.message,
-      stack: error.stack,
-      requestBody: req.body
+    console.error('Registration error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message || 'Error registering user' 
     });
-    next(error);
   }
 };
 
