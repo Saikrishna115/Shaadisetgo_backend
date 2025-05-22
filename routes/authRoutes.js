@@ -67,21 +67,29 @@ router.post('/register', async (req, res) => {
     }
 
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    // Split fullName into firstName and lastName
+    const [firstName, ...lastNameParts] = fullName.trim().split(' ');
+    const lastName = lastNameParts.join(' ');
 
-    // Create new user
+    if (!firstName || !lastName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide both first name and last name'
+      });
+    }
+
+    // Create new user (password will be hashed by the User model's pre-save middleware)
     const user = new User({
-      email,
-      password: hashedPassword,
+      firstName,
+      lastName,
+      email: email.toLowerCase(),
+      password,
       role,
-      fullName,
       phone,
       ...(role === 'vendor' && {
         businessName,
@@ -104,6 +112,7 @@ router.post('/register', async (req, res) => {
     );
 
     res.status(201).json({
+      success: true,
       token,
       user: {
         id: user._id,
@@ -114,7 +123,11 @@ router.post('/register', async (req, res) => {
     });
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ message: 'Error registering user' });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error registering user',
+      error: error.message 
+    });
   }
 });
 
@@ -127,8 +140,16 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // Input validation
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide both email and password'
+      });
+    }
+
     // Check if user exists and explicitly select password field
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
     if (!user) {
       return res.status(401).json({ 
         success: false,
@@ -136,12 +157,12 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Verify password
-    const isMatch = await bcrypt.compare(password, user.password);
+    // Verify password using the User model's method
+    const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return res.status(401).json({ 
         success: false,
-        message: 'Invalid credentials' 
+        message: user.isLocked() ? 'Account is temporarily locked. Please try again later.' : 'Invalid credentials'
       });
     }
 
