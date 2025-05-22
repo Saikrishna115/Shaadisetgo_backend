@@ -7,17 +7,21 @@ const {
   register, 
   login, 
   getProfile,
-  refreshToken 
+  refreshToken,
+  getMe,
+  updatePassword
 } = require('../controllers/authController');
 const { 
   protect, 
-  authorize,
+  restrictTo,
   checkVendorStatus 
 } = require('../middleware/auth');
 const {
   registerValidator,
-  loginValidator
+  loginValidator,
+  updatePasswordValidation
 } = require('../middleware/validators/auth.validator');
+const validate = require('../middleware/validate');
 
 // Test route to verify routing is working
 router.get('/test', (req, res) => {
@@ -29,14 +33,14 @@ router.get('/test', (req, res) => {
  * @desc    Register a new user
  * @access  Public
  */
-router.post('/register', registerValidator, register);
+router.post('/register', validate(registerValidator), register);
 
 /**
  * @route   POST /api/auth/login
  * @desc    Authenticate user & get token
  * @access  Public
  */
-router.post('/login', loginValidator, login);
+router.post('/login', validate(loginValidator), login);
 
 /**
  * @route   POST /api/auth/logout
@@ -55,7 +59,7 @@ router.post('/logout', (req, res) => {
  * @desc    Get current user's profile
  * @access  Private
  */
-router.get('/me', protect, checkVendorStatus, getProfile);
+router.get('/me', protect, checkVendorStatus, getMe);
 
 /**
  * @route   POST /api/auth/refresh-token
@@ -69,7 +73,7 @@ router.post('/refresh-token', refreshToken);
  * @desc    Get all users (admin only)
  * @access  Private
  */
-router.get('/admin/users', protect, authorize('admin'), async (req, res) => {
+router.get('/admin/users', protect, restrictTo('admin'), async (req, res) => {
   try {
     const users = await User.find().select('-password');
     res.json({
@@ -90,7 +94,7 @@ router.get('/admin/users', protect, authorize('admin'), async (req, res) => {
  * @desc    Get vendor profile
  * @access  Private
  */
-router.get('/vendor/profile', protect, authorize('vendor'), checkVendorStatus, async (req, res) => {
+router.get('/vendor/profile', protect, restrictTo('vendor'), checkVendorStatus, async (req, res) => {
   try {
     const vendorProfile = req.vendorProfile;
     res.json({
@@ -105,5 +109,12 @@ router.get('/vendor/profile', protect, authorize('vendor'), checkVendorStatus, a
     });
   }
 });
+
+/**
+ * @route   PATCH /api/auth/update-password
+ * @desc    Update user password
+ * @access  Private
+ */
+router.patch('/update-password', protect, validate(updatePasswordValidation), updatePassword);
 
 module.exports = router;
