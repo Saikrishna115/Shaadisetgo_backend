@@ -7,6 +7,7 @@ const xss = require('xss-clean');
 const compression = require('compression');
 const path = require('path');
 const AppError = require('./utils/appError');
+const mongoose = require('mongoose');
 
 const app = express();
 
@@ -21,7 +22,7 @@ app.use(compression());
 
 // Rate limiting
 const limiter = rateLimit({
-  max: 100,
+  max: 100, // limit each IP to 100 requests per windowMs
   windowMs: 60 * 60 * 1000, // 1 hour
   message: 'Too many requests from this IP, please try again in an hour!'
 });
@@ -38,14 +39,29 @@ if (!fs.existsSync(uploadsDir)) {
 app.use('/uploads', express.static(uploadsDir));
 
 // Import routes
-const routes = require('./routes');
-app.use('/api', routes);
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
+const vendorRoutes = require('./routes/vendorRoutes');
+const bookingRoutes = require('./routes/bookingRoutes');
+const favoriteRoutes = require('./routes/favoriteRoutes');
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/vendors', vendorRoutes);
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/favorites', favoriteRoutes);
+
+// Add a test route to verify routing is working
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'API is working' });
+});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'ok',
-    database: require('mongoose').connection.readyState === 1 ? 'connected' : 'disconnected'
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
   });
 });
 
@@ -55,6 +71,37 @@ app.all('*', (req, res, next) => {
 });
 
 // Global error handling middleware
-app.use(require('./middleware/errorHandler'));
+app.use((err, req, res, next) => {
+  err.statusCode = err.statusCode || 500;
+  err.status = err.status || 'error';
+
+  // Development error response
+  if (process.env.NODE_ENV === 'development') {
+    res.status(err.statusCode).json({
+      status: err.status,
+      error: err,
+      message: err.message,
+      stack: err.stack
+    });
+  } 
+  // Production error response
+  else {
+    // Operational, trusted error: send message to client
+    if (err.isOperational) {
+      res.status(err.statusCode).json({
+        status: err.status,
+        message: err.message
+      });
+    }
+    // Programming or other unknown error: don't leak error details
+    else {
+      console.error('ERROR 💥', err);
+      res.status(500).json({
+        status: 'error',
+        message: 'Something went wrong!'
+      });
+    }
+  }
+});
 
 module.exports = app; 
