@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 const SALT_WORK_FACTOR = 12; // Increased from 10 to 12 for better security
 
@@ -8,29 +9,37 @@ const userSchema = new mongoose.Schema({
   fullName: {
     type: String,
     required: [true, 'Please provide your full name'],
-    trim: true
+    trim: true,
+    minlength: [3, 'Name must be at least 3 characters long'],
+    maxlength: [50, 'Name cannot be more than 50 characters']
   },
   email: {
     type: String,
     required: [true, 'Please provide your email'],
     unique: true,
     lowercase: true,
+    trim: true,
     match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email']
   },
   password: {
     type: String,
     required: [true, 'Please provide a password'],
-    minlength: 6,
+    minlength: [8, 'Password must be at least 8 characters long'],
     select: false
   },
   phone: {
     type: String,
-    required: [true, 'Please provide your phone number']
+    trim: true,
+    match: [/^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/, 'Please provide a valid phone number']
+  },
+  location: {
+    type: String,
+    trim: true
   },
   role: {
     type: String,
-    enum: ['customer', 'vendor', 'admin'],
-    default: 'customer'
+    enum: ['user', 'vendor', 'admin'],
+    default: 'user'
   },
   address: String,
   city: String,

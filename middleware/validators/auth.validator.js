@@ -19,18 +19,21 @@ const registerValidator = validate([
       }
       return true;
     }),
-  body('firstName')
+  body('fullName')
     .trim()
     .notEmpty()
-    .withMessage('First name is required')
-    .isLength({ min: 2, max: 50 })
-    .withMessage('First name must be between 2 and 50 characters'),
-  body('lastName')
-    .trim()
-    .notEmpty()
-    .withMessage('Last name is required')
-    .isLength({ min: 2, max: 50 })
-    .withMessage('Last name must be between 2 and 50 characters'),
+    .withMessage('Full name is required')
+    .isLength({ min: 3, max: 100 })
+    .withMessage('Full name must be between 3 and 100 characters')
+    .matches(/^[a-zA-Z\s]+$/)
+    .withMessage('Full name can only contain letters and spaces')
+    .custom((value) => {
+      const nameParts = value.trim().split(' ');
+      if (nameParts.length < 2) {
+        throw new Error('Please provide both first name and last name');
+      }
+      return true;
+    }),
   body('phoneNumber')
     .optional()
     .matches(/^[0-9]{10}$/)

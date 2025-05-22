@@ -34,16 +34,34 @@ const generateToken = (userId, role, passwordTimestamp) => {
 
 const register = async (req, res, next) => {
   try {
-    const { firstName, lastName, email, password, role, phone } = req.body;
+    const { fullName, email, password, role, phone } = req.body;
 
     // Validate required fields
-    const requiredFields = ['firstName', 'lastName', 'email', 'password', 'phone', 'role'];
+    const requiredFields = ['fullName', 'email', 'password', 'phone', 'role'];
     const missingFields = requiredFields.filter(field => !req.body[field]);
     if (missingFields.length > 0) {
       return res.status(400).json({
         success: false,
         message: 'Missing required fields',
         fields: missingFields
+      });
+    }
+
+    // Validate fullName format
+    const nameRegex = /^[a-zA-Z\s]{3,100}$/;
+    if (!nameRegex.test(fullName)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Full name must be between 3 and 100 characters and contain only letters and spaces'
+      });
+    }
+
+    // Validate that fullName has at least two parts
+    const nameParts = fullName.trim().split(' ');
+    if (nameParts.length < 2) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide both first name and last name'
       });
     }
 
@@ -107,12 +125,11 @@ const register = async (req, res, next) => {
 
     // Create new user with enhanced security
     const user = await User.create({
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
+      fullName: fullName.trim(),
       email: email.toLowerCase(),
       password,
-      role: role || 'customer',
-      phone: phone.trim(),
+      role,
+      phone,
       ...(role === 'vendor' && { vendorDetails: req.body.vendorDetails }),
       lastLogin: new Date(),
       loginAttempts: 0
@@ -151,8 +168,6 @@ const register = async (req, res, next) => {
       data: {
         user: {
           id: user._id,
-          firstName: user.firstName,
-          lastName: user.lastName,
           fullName: user.fullName,
           email: user.email,
           role: user.role,
@@ -174,11 +189,28 @@ const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    // Input validation
-    if (!email || !password) {
+    // Input validation with specific error messages
+    if (!email && !password) {
       return res.status(400).json({
         success: false,
+        code: 'MISSING_CREDENTIALS',
         message: 'Please provide both email and password'
+      });
+    }
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        code: 'MISSING_EMAIL',
+        message: 'Please provide your email'
+      });
+    }
+
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        code: 'MISSING_PASSWORD',
+        message: 'Please provide your password'
       });
     }
 
@@ -187,6 +219,7 @@ const login = async (req, res, next) => {
     if (!emailRegex.test(email)) {
       return res.status(400).json({
         success: false,
+        code: 'INVALID_EMAIL_FORMAT',
         message: ERROR_MESSAGES.INVALID_EMAIL
       });
     }
@@ -195,8 +228,9 @@ const login = async (req, res, next) => {
     const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
     
     if (!user) {
-      return res.status(400).json({
+      return res.status(401).json({
         success: false,
+        code: 'INVALID_CREDENTIALS',
         message: ERROR_MESSAGES.INVALID_CREDENTIALS
       });
     }
@@ -206,14 +240,25 @@ const login = async (req, res, next) => {
       const isMatch = await user.comparePassword(password);
       
       if (!isMatch) {
-        return res.status(400).json({
+        // Get remaining attempts before lockout
+        const remainingAttempts = 5 - (user.loginAttempts + 1);
+        
+        return res.status(401).json({
           success: false,
-          message: user.isLocked() ? ERROR_MESSAGES.ACCOUNT_LOCKED : ERROR_MESSAGES.INVALID_CREDENTIALS
+          code: user.isLocked() ? 'ACCOUNT_LOCKED' : 'INVALID_CREDENTIALS',
+          message: user.isLocked() 
+            ? ERROR_MESSAGES.ACCOUNT_LOCKED 
+            : remainingAttempts > 0 
+              ? `${ERROR_MESSAGES.INVALID_CREDENTIALS}. ${remainingAttempts} attempts remaining before account lockout.`
+              : ERROR_MESSAGES.INVALID_CREDENTIALS,
+          remainingAttempts: remainingAttempts > 0 ? remainingAttempts : 0,
+          lockoutDuration: user.isLocked() ? Math.ceil((user.lockUntil - Date.now()) / 1000 / 60) : null
         });
       }
     } catch (error) {
-      return res.status(400).json({
+      return res.status(401).json({
         success: false,
+        code: 'AUTH_ERROR',
         message: error.message
       });
     }
@@ -223,22 +268,37 @@ const login = async (req, res, next) => {
       const vendorProfile = await Vendor.findOne({ userId: user._id });
       
       if (!vendorProfile) {
-        return res.status(400).json({
+        return res.status(403).json({
           success: false,
-          message: ERROR_MESSAGES.VENDOR_PROFILE_MISSING
+          code: 'VENDOR_PROFILE_MISSING',
+          message: ERROR_MESSAGES.VENDOR_PROFILE_MISSING,
+          nextStep: '/vendor/setup'
         });
       }
 
       if (!vendorProfile.isActive) {
-        return res.status(400).json({
+        return res.status(403).json({
           success: false,
-          message: ERROR_MESSAGES.VENDOR_INACTIVE
+          code: 'VENDOR_INACTIVE',
+          message: ERROR_MESSAGES.VENDOR_INACTIVE,
+          supportEmail: process.env.SUPPORT_EMAIL || 'support@shaadisetgo.com'
         });
       }
     }
 
-    // Generate token with password change timestamp
+    // Generate token with password change timestamp and shorter expiry
     const token = generateToken(user._id, user.role, user.passwordChangedAt?.getTime());
+    
+    // Generate refresh token with longer expiry
+    const refreshToken = jwt.sign(
+      { userId: user._id },
+      process.env.JWT_REFRESH_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    // Update last login time
+    user.lastLogin = new Date();
+    await user.save();
 
     // Log successful login
     console.log('Login successful:', {
@@ -247,17 +307,28 @@ const login = async (req, res, next) => {
       timestamp: new Date().toISOString()
     });
 
+    // Set refresh token in HTTP-only cookie
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
     res.status(200).json({
       success: true,
       message: 'Login successful',
+      code: 'LOGIN_SUCCESS',
       token,
       user: {
         id: user._id,
         fullName: user.fullName,
         email: user.email,
         role: user.role,
-        phone: user.phone
-      }
+        phone: user.phone,
+        lastLogin: user.lastLogin
+      },
+      expiresIn: parseInt(process.env.JWT_EXPIRES_IN) || 86400 // 24 hours in seconds
     });
   } catch (error) {
     console.error('Login error:', {
@@ -265,7 +336,12 @@ const login = async (req, res, next) => {
       stack: error.stack,
       timestamp: new Date().toISOString()
     });
-    next(error);
+    
+    res.status(500).json({
+      success: false,
+      code: 'SERVER_ERROR',
+      message: 'An unexpected error occurred. Please try again later.'
+    });
   }
 };
 
@@ -287,4 +363,94 @@ const getProfile = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, getProfile };
+const refreshToken = async (req, res) => {
+  try {
+    const refreshToken = req.cookies.refreshToken;
+
+    if (!refreshToken) {
+      return res.status(401).json({
+        success: false,
+        code: 'REFRESH_TOKEN_MISSING',
+        message: 'No refresh token provided'
+      });
+    }
+
+    try {
+      // Verify refresh token
+      const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+      
+      // Get user
+      const user = await User.findById(decoded.userId);
+      
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          code: 'USER_NOT_FOUND',
+          message: 'User no longer exists'
+        });
+      }
+
+      // Check if user's password has changed since token was issued
+      if (user.passwordChangedAfterToken(decoded.iat)) {
+        return res.status(401).json({
+          success: false,
+          code: 'PASSWORD_CHANGED',
+          message: 'Password has been changed. Please login again'
+        });
+      }
+
+      // Generate new access token
+      const newToken = generateToken(user._id, user.role, user.passwordChangedAt?.getTime());
+
+      // Generate new refresh token
+      const newRefreshToken = jwt.sign(
+        { userId: user._id },
+        process.env.JWT_REFRESH_SECRET,
+        { expiresIn: '7d' }
+      );
+
+      // Set new refresh token in cookie
+      res.cookie('refreshToken', newRefreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      });
+
+      res.json({
+        success: true,
+        code: 'TOKEN_REFRESHED',
+        token: newToken,
+        user: {
+          id: user._id,
+          fullName: user.fullName,
+          email: user.email,
+          role: user.role,
+          phone: user.phone,
+          lastLogin: user.lastLogin
+        },
+        expiresIn: parseInt(process.env.JWT_EXPIRES_IN) || 86400
+      });
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        code: 'INVALID_REFRESH_TOKEN',
+        message: 'Invalid or expired refresh token'
+      });
+    }
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    res.status(500).json({
+      success: false,
+      code: 'SERVER_ERROR',
+      message: 'An unexpected error occurred while refreshing token'
+    });
+  }
+};
+
+module.exports = { 
+  register, 
+  login, 
+  getProfile,
+  refreshToken 
+};
