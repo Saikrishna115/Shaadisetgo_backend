@@ -5,14 +5,9 @@ const jwt = require('jsonwebtoken');
 const SALT_WORK_FACTOR = 12; // Increased from 10 to 12 for better security
 
 const userSchema = new mongoose.Schema({
-  firstName: {
+  fullName: {
     type: String,
-    required: [true, 'Please provide your first name'],
-    trim: true
-  },
-  lastName: {
-    type: String,
-    required: [true, 'Please provide your last name'],
+    required: [true, 'Please provide your full name'],
     trim: true
   },
   email: {
@@ -70,10 +65,18 @@ const userSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
-// Virtual for fullName
-userSchema.virtual('fullName').get(function() {
-  if (this.firstName && this.lastName) {
-    return `${this.firstName} ${this.lastName}`;
+// Virtual for firstName and lastName
+userSchema.virtual('firstName').get(function() {
+  if (this.fullName) {
+    return this.fullName.split(' ')[0];
+  }
+  return '';
+});
+
+userSchema.virtual('lastName').get(function() {
+  if (this.fullName) {
+    const nameParts = this.fullName.split(' ');
+    return nameParts.slice(1).join(' ');
   }
   return '';
 });

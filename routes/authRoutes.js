@@ -72,21 +72,9 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Split fullName into firstName and lastName
-    const [firstName, ...lastNameParts] = fullName.trim().split(' ');
-    const lastName = lastNameParts.join(' ');
-
-    if (!firstName || !lastName) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide both first name and last name'
-      });
-    }
-
     // Create new user (password will be hashed by the User model's pre-save middleware)
     const user = new User({
-      firstName,
-      lastName,
+      fullName: fullName.trim(),
       email: email.toLowerCase(),
       password,
       role,
@@ -178,9 +166,7 @@ router.post('/login', async (req, res) => {
       id: user._id,
       email: user.email,
       role: user.role,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      fullName: `${user.firstName} ${user.lastName}`,
+      fullName: user.fullName || '',
       phone: user.phone
     };
 
