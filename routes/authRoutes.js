@@ -173,12 +173,15 @@ router.post('/login', async (req, res) => {
       { expiresIn: '24h' }
     );
 
-    // Remove password from response
+    // Remove sensitive fields from response
     const userResponse = {
       id: user._id,
       email: user.email,
       role: user.role,
-      fullName: user.fullName
+      firstName: user.firstName,
+      lastName: user.lastName,
+      fullName: `${user.firstName} ${user.lastName}`,
+      phone: user.phone
     };
 
     res.json({

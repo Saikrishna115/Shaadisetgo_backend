@@ -15,13 +15,6 @@ const userSchema = new mongoose.Schema({
     required: [true, 'Please provide your last name'],
     trim: true
   },
-  fullName: {
-    type: String,
-    virtual: true,
-    get() {
-      return `${this.firstName} ${this.lastName}`;
-    }
-  },
   email: {
     type: String,
     required: [true, 'Please provide your email'],
@@ -72,11 +65,22 @@ const userSchema = new mongoose.Schema({
   },
   verificationToken: String
 }, { 
-  timestamps: true 
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
+// Virtual for fullName
+userSchema.virtual('fullName').get(function() {
+  if (this.firstName && this.lastName) {
+    return `${this.firstName} ${this.lastName}`;
+  }
+  return '';
 });
 
 // Index for faster queries
 userSchema.index({ role: 1 });
+userSchema.index({ email: 1 }, { unique: true });
 
 // Encrypt password using bcrypt
 userSchema.pre('save', async function(next) {
