@@ -35,7 +35,7 @@ const generateToken = (userId, role, passwordTimestamp) => {
 };
 
 // Register new user
-exports.register = catchAsync(async (req, res) => {
+const register = catchAsync(async (req, res) => {
   const { name, email, password, role } = req.body;
 
   // Check if user already exists
@@ -66,7 +66,7 @@ exports.register = catchAsync(async (req, res) => {
 });
 
 // Login user
-exports.login = catchAsync(async (req, res, next) => {
+const login = catchAsync(async (req, res, next) => {
   const { email, password } = req.body;
 
   // Check if email and password exist
@@ -94,7 +94,7 @@ exports.login = catchAsync(async (req, res, next) => {
 });
 
 // Get current user
-exports.getMe = catchAsync(async (req, res) => {
+const getMe = catchAsync(async (req, res) => {
   res.status(200).json({
     status: 'success',
     user: req.user
@@ -102,7 +102,7 @@ exports.getMe = catchAsync(async (req, res) => {
 });
 
 // Update password
-exports.updatePassword = catchAsync(async (req, res, next) => {
+const updatePassword = catchAsync(async (req, res, next) => {
   const { currentPassword, newPassword } = req.body;
 
   // Get user from collection
@@ -127,6 +127,7 @@ exports.updatePassword = catchAsync(async (req, res, next) => {
   });
 });
 
+// Get user profile
 const getProfile = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id).select('-password -loginAttempts -lockUntil');
@@ -145,6 +146,7 @@ const getProfile = async (req, res, next) => {
   }
 };
 
+// Refresh token
 const refreshToken = async (req, res) => {
   try {
     const refreshToken = req.cookies.refreshToken;

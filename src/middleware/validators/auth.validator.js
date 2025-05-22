@@ -1,7 +1,7 @@
 const { body, param } = require('express-validator');
-const { validate } = require('./validate');
+const validate = require('../validate');
 
-const registerValidator = validate([
+const registerValidator = [
   body('name')
     .trim()
     .notEmpty()
@@ -30,9 +30,9 @@ const registerValidator = validate([
     .optional()
     .isIn(['user', 'vendor', 'admin'])
     .withMessage('Invalid role specified')
-]);
+];
 
-const loginValidator = validate([
+const loginValidator = [
   body('email')
     .trim()
     .notEmpty()
@@ -45,17 +45,17 @@ const loginValidator = validate([
     .trim()
     .notEmpty()
     .withMessage('Password is required')
-]);
+];
 
-const forgotPasswordValidator = validate([
+const forgotPasswordValidator = [
   body('email')
     .trim()
     .isEmail()
     .withMessage('Please enter a valid email')
     .normalizeEmail()
-]);
+];
 
-const resetPasswordValidator = validate([
+const resetPasswordValidator = [
   param('token')
     .notEmpty()
     .withMessage('Reset token is required'),
@@ -71,9 +71,9 @@ const resetPasswordValidator = validate([
       }
       return true;
     })
-]);
+];
 
-const updatePasswordValidator = validate([
+const updatePasswordValidator = [
   body('currentPassword')
     .trim()
     .notEmpty()
@@ -87,7 +87,7 @@ const updatePasswordValidator = validate([
     .withMessage('Password must be at least 8 characters long')
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/)
     .withMessage('Password must contain at least one uppercase letter, one lowercase letter, one number and one special character')
-]);
+];
 
 module.exports = {
   registerValidator,

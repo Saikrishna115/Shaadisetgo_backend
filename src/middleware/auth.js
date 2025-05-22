@@ -1,5 +1,4 @@
 const jwt = require('jsonwebtoken');
-const { promisify } = require('util');
 const User = require('../models/User');
 const Vendor = require('../models/Vendor');
 const AppError = require('../utils/appError');
@@ -47,43 +46,24 @@ const restrictTo = (...roles) => {
 };
 
 // Vendor status check
-const checkVendorStatus = async (req, res, next) => {
-  try {
-    if (req.user.role !== 'vendor') {
-      return next();
-    }
-
-    const vendorProfile = await Vendor.findOne({ userId: req.user._id });
-    
-    if (!vendorProfile) {
-      return res.status(403).json({
-        success: false,
-        code: 'VENDOR_PROFILE_MISSING',
-        message: 'Vendor profile not found. Please complete your profile setup',
-        nextStep: '/vendor/setup'
-      });
-    }
-
-    if (!vendorProfile.isActive) {
-      return res.status(403).json({
-        success: false,
-        code: 'VENDOR_INACTIVE',
-        message: 'Your vendor account is currently inactive. Please contact support',
-        supportEmail: process.env.SUPPORT_EMAIL || 'support@shaadisetgo.com'
-      });
-    }
-
-    req.vendorProfile = vendorProfile;
-    next();
-  } catch (error) {
-    console.error('Vendor status check error:', error);
-    res.status(500).json({
-      success: false,
-      code: 'SERVER_ERROR',
-      message: 'An unexpected error occurred while checking vendor status'
-    });
+const checkVendorStatus = catchAsync(async (req, res, next) => {
+  if (req.user.role !== 'vendor') {
+    return next();
   }
-};
+
+  const vendorProfile = await Vendor.findOne({ userId: req.user._id });
+  
+  if (!vendorProfile) {
+    return next(new AppError('Vendor profile not found. Please complete your profile setup', 403, 'VENDOR_PROFILE_MISSING'));
+  }
+
+  if (!vendorProfile.isActive) {
+    return next(new AppError('Your vendor account is currently inactive. Please contact support', 403, 'VENDOR_INACTIVE'));
+  }
+
+  req.vendorProfile = vendorProfile;
+  next();
+});
 
 module.exports = {
   protect,

@@ -19,9 +19,10 @@ const {
 const {
   registerValidator,
   loginValidator,
-  updatePasswordValidation
+  updatePasswordValidator
 } = require('../middleware/validators/auth.validator');
 const validate = require('../middleware/validate');
+const { AppError } = require('../utils/appError');
 
 // Test route to verify routing is working
 router.get('/test', (req, res) => {
@@ -49,7 +50,7 @@ router.post('/login', validate(loginValidator), login);
  */
 router.post('/logout', (req, res) => {
   res.status(200).json({
-    success: true,
+    status: 'success',
     message: 'Logged out successfully'
   });
 });
@@ -75,17 +76,13 @@ router.post('/refresh-token', refreshToken);
  */
 router.get('/admin/users', protect, restrictTo('admin'), async (req, res) => {
   try {
-    const users = await User.find().select('-password');
-    res.json({
-      success: true,
+    const users = await User.findOne().select('-password');
+    res.status(200).json({
+      status: 'success',
       data: users
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      code: 'SERVER_ERROR',
-      message: 'Error fetching users'
-    });
+    next(new AppError('Error fetching users', 500));
   }
 });
 
@@ -97,16 +94,12 @@ router.get('/admin/users', protect, restrictTo('admin'), async (req, res) => {
 router.get('/vendor/profile', protect, restrictTo('vendor'), checkVendorStatus, async (req, res) => {
   try {
     const vendorProfile = req.vendorProfile;
-    res.json({
-      success: true,
+    res.status(200).json({
+      status: 'success',
       data: vendorProfile
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      code: 'SERVER_ERROR',
-      message: 'Error fetching vendor profile'
-    });
+    next(new AppError('Error fetching vendor profile', 500));
   }
 });
 
@@ -115,6 +108,6 @@ router.get('/vendor/profile', protect, restrictTo('vendor'), checkVendorStatus, 
  * @desc    Update user password
  * @access  Private
  */
-router.patch('/update-password', protect, validate(updatePasswordValidation), updatePassword);
+router.patch('/update-password', protect, validate(updatePasswordValidator), updatePassword);
 
 module.exports = router;
