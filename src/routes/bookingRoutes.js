@@ -12,18 +12,18 @@ const {
   getBookingStats,
   updateBookingStatus
 } = require('../controllers/bookingController');
-const { authenticateToken: protect, authorize } = require('../middleware/auth');
+const { authenticateToken: protect, restrictTo } = require('../middleware/auth');
 
 // Admin routes
-router.get('/', protect, authorize('admin'), getBookings);
+router.get('/', protect, restrictTo('admin'), getBookings);
 
 // Vendor routes
-router.get('/vendor', protect, authorize('vendor'), getVendorBookings);
-router.get('/stats', protect, authorize('vendor'), getBookingStats);
-router.put('/:id/status', protect, authorize('customer'), updateBookingStatus);
+router.get('/vendor', protect, restrictTo('vendor'), getVendorBookings);
+router.get('/stats', protect, restrictTo('vendor'), getBookingStats);
+router.put('/:id/status', protect, restrictTo('customer'), updateBookingStatus);
 
 // Customer routes
-router.put('/:id/vendor-status', protect, authorize('vendor'), async (req, res) => {
+router.put('/:id/vendor-status', protect, restrictTo('vendor'), async (req, res) => {
   try {
     const booking = await Booking.findByIdAndUpdate(
       req.params.id,
@@ -46,12 +46,12 @@ router.put('/:id/vendor-status', protect, authorize('vendor'), async (req, res) 
   }
 });
 
-router.post('/', protect, authorize('customer'), createBooking);
-router.get('/customer', protect, authorize('customer'), getCustomerBookings);
+router.post('/', protect, restrictTo('customer'), createBooking);
+router.get('/customer', protect, restrictTo('customer'), getCustomerBookings);
 
 // Parameterized routes (must come after specific routes)
 router.get('/:id', protect, getBookingById);
 router.put('/:id', protect, updateBooking);
-router.delete('/:id', protect, authorize('customer'), cancelBooking);
+router.delete('/:id', protect, restrictTo('customer'), cancelBooking);
 
 module.exports = router;
