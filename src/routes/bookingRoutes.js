@@ -13,7 +13,7 @@ const {
   updateBookingStatus,
   updateVendorStatus
 } = require('../controllers/bookingController');
-const { authenticateToken: protect, restrictTo } = require('../middleware/auth');
+const { protect, restrictTo } = require('../middleware/auth');
 
 // Admin routes
 router.get('/', protect, restrictTo('admin'), getBookings);
