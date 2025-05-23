@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const { getFavorites, addFavorite, removeFavorite } = require('../controllers/favoriteController');
-const { authenticateToken: protect, authorize } = require('../middleware/auth');
+const { protect, restrictTo } = require('../middleware/auth');
 
 // All routes require authentication and customer role
 router.use(protect);
-router.use(authorize('customer'));
+router.use(restrictTo('customer'));
 
 // Get user's favorite vendors
 router.get('/', getFavorites);
