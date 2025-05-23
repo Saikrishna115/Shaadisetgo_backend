@@ -492,8 +492,6 @@ const updateVendorStatus = async (req, res) => {
 };
 
 module.exports = {
-  updateVendorStatus,
-  updateBookingStatus,
   createBooking,
   getBookings,
   getBookingById,
@@ -501,5 +499,7 @@ module.exports = {
   getCustomerBookings,
   getVendorBookings,
   cancelBooking,
-  getBookingStats
+  getBookingStats,
+  updateBookingStatus,
+  updateVendorStatus
 };
