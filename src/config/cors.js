@@ -4,11 +4,12 @@ const corsOptions = {
     const allowedOrigins = [
       'http://localhost:3000',  // React development server
       'http://localhost:5173',  // Vite development server
-      process.env.FRONTEND_URL, // Production frontend URL
+      'https://shaadisetgo-frontend.vercel.app', // Production frontend URL
+      process.env.FRONTEND_URL, // Backup production frontend URL
     ].filter(Boolean);
 
     if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
+      callback(null, origin);
     } else {
       callback(new Error('Not allowed by CORS'));
     }
@@ -38,4 +39,4 @@ const corsOptions = {
   optionsSuccessStatus: 204
 };
 
-module.exports = corsOptions; 
+module.exports = corsOptions;

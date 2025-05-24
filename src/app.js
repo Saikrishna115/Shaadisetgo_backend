@@ -13,7 +13,8 @@ const app = express();
 
 // Security middleware
 app.use(helmet());
-app.use(cors());
+const corsOptions = require('./config/cors');
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(mongoSanitize());
@@ -104,4 +105,4 @@ app.use((err, req, res, next) => {
   }
 });
 
-module.exports = app; 
+module.exports = app;
