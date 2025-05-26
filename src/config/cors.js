@@ -29,7 +29,8 @@ const corsOptions = {
     'X-Requested-With',
     'Accept',
     'Origin',
-    'cache-control'
+    'cache-control',
+    'pragma'
   ],
   exposedHeaders: [           // Headers exposed to the client
     'Content-Range',
