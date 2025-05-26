@@ -11,6 +11,8 @@ const mongoose = require('mongoose');
 
 const app = express();
 
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
 const corsOptions = require('./config/cors');
@@ -23,9 +25,15 @@ app.use(compression());
 
 // Rate limiting
 const limiter = rateLimit({
-  max: 100, // limit each IP to 100 requests per windowMs
-  windowMs: 60 * 60 * 1000, // 1 hour
-  message: 'Too many requests from this IP, please try again in an hour!'
+  max: 100,
+  windowMs: 60 * 60 * 1000,
+  message: 'Too many requests from this IP, please try again in an hour!',
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: {
+    xForwardedForHeader: true,
+    trustProxy: true
+  }
 });
 app.use('/api', limiter);
 
