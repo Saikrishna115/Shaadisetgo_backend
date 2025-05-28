@@ -3,7 +3,7 @@ const Booking = require('../models/Booking');
 const Vendor = require('../models/Vendor');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
-const { sendEmail } = require('../utils/email');
+const { sendEmail, sendBookingConfirmationEmail } = require('../utils/email');
 
 // Create a booking
 const calculateBookingStats = async (vendorId) => {
@@ -95,27 +95,76 @@ ShaadiSetGo Team`;
 
 const createBooking = async (req, res) => {
   try {
+    const { vendorId, eventDate, eventType, guestCount, venue, startTime, endTime, additionalServices, specialRequests, packageId, addons } = req.body;
+
     // Get customer details
     const customer = await User.findById(req.user.id);
     if (!customer) {
       return res.status(404).json({ error: 'Customer not found' });
     }
 
-    // Get vendor details
-    const vendor = await Vendor.findById(req.body.vendorId);
+    // Get vendor details and verify availability
+    const vendor = await Vendor.findById(vendorId);
     if (!vendor) {
       return res.status(404).json({ error: 'Vendor not found' });
     }
 
+    // Verify date availability
+    const isDateBlocked = vendor.blockedDates?.some(date => 
+      date.toISOString().split('T')[0] === new Date(eventDate).toISOString().split('T')[0]
+    );
+
+    if (isDateBlocked) {
+      return res.status(400).json({ error: 'Selected date is not available' });
+    }
+
+    // Calculate package and addons cost
+    let totalCost = 0;
+    let selectedPackage = null;
+    let selectedAddons = [];
+
+    if (packageId) {
+      selectedPackage = vendor.packages.id(packageId);
+      if (!selectedPackage) {
+        return res.status(404).json({ error: 'Package not found' });
+      }
+      totalCost += selectedPackage.price;
+
+      if (addons?.length > 0) {
+        addons.forEach(addonId => {
+          const addon = vendor.addons.id(addonId);
+          if (addon) {
+            totalCost += addon.price;
+            selectedAddons.push(addon);
+          }
+        });
+      }
+    }
+
     // Create booking with all required information
     const bookingData = {
-      ...req.body,
       customerId: customer._id,
       customerName: customer.fullName,
       customerEmail: customer.email,
       customerPhone: customer.phone,
+      vendorId: vendor._id,
       vendorName: vendor.businessName,
       vendorService: vendor.serviceCategory,
+      eventDetails: {
+        date: eventDate,
+        type: eventType,
+        guestCount,
+        venue,
+        startTime,
+        endTime,
+        additionalServices,
+        specialRequests
+      },
+      package: selectedPackage ? {
+        details: selectedPackage,
+        addons: selectedAddons,
+        totalCost
+      } : null,
       status: 'pending',
       lastUpdatedBy: 'customer'
     };
@@ -126,6 +175,9 @@ const createBooking = async (req, res) => {
     const populatedBooking = await Booking.findById(booking._id)
       .populate('customerId', 'fullName email phone')
       .populate('vendorId', 'businessName serviceCategory');
+
+    // Send confirmation email
+    await sendBookingConfirmationEmail(customer.email, populatedBooking);
 
     res.status(201).json(populatedBooking);
   } catch (err) {
@@ -188,7 +240,11 @@ const getBookingById = async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id)
       .populate('customerId', 'fullName email phone')
-      .populate('vendorId', 'businessName serviceCategory location priceRange');
+      .populate('vendorId', 'businessName serviceCategory location priceRange contactInfo profileImage')
+      .populate({
+        path: 'messages.sender',
+        select: 'fullName role profileImage'
+      });
 
     if (!booking) {
       return res.status(404).json({ error: 'Booking not found' });
@@ -201,6 +257,15 @@ const getBookingById = async (req, res) => {
       !(await Vendor.exists({ userId: req.user._id, _id: booking.vendorId._id }))
     ) {
       return res.status(403).json({ error: 'Not authorized to view this booking' });
+    }
+
+    // Add additional booking analytics if vendor is viewing
+    if (await Vendor.exists({ userId: req.user._id, _id: booking.vendorId._id })) {
+      const stats = await calculateBookingStats(booking.vendorId);
+      return res.json({
+        booking,
+        stats
+      });
     }
 
     res.json(booking);

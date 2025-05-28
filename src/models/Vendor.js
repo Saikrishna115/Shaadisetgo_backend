@@ -25,7 +25,7 @@ const vendorSchema = new mongoose.Schema({
   serviceCategory: { 
     type: String, 
     required: true,
-    enum: ['Venue', 'Catering', 'Photography', 'DJ', 'Decor', 'Other']
+    enum: ['Venue', 'Catering', 'Photography', 'DJ', 'Decor', 'Makeup', 'Transportation', 'Entertainment', 'Other']
   },
   serviceDescription: { type: String },
   experienceYears: { type: Number },
@@ -33,6 +33,13 @@ const vendorSchema = new mongoose.Schema({
     min: { type: Number },
     max: { type: Number }
   },
+  packages: [{
+    name: { type: String, required: true },
+    description: { type: String },
+    price: { type: Number, required: true },
+    features: [String],
+    isPopular: { type: Boolean, default: false }
+  }],
 
   // Availability and Capacity Management
   maxEventsPerDay: { type: Number, default: 1 },
@@ -51,7 +58,10 @@ const vendorSchema = new mongoose.Schema({
     reason: { type: String }
   }],
 
+  // Tags and Categories
   tags: [{ type: String }],
+  specialties: [{ type: String }],
+  amenities: [{ type: String }],
 
   // Media & Assets
   profileImage: {
@@ -67,86 +77,96 @@ const vendorSchema = new mongoose.Schema({
     caption: { type: String },
     uploadedAt: { type: Date, default: Date.now }
   }],
-
-  // Status & Verification
-  isVerified: { type: Boolean, default: false },
-  isActive: { type: Boolean, default: true },
-
-  // Ratings & Reviews
-  rating: { 
-    average: { type: Number, default: 0 },
-    count: { type: Number, default: 0 }
-  },
-  reviews: [{
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    rating: { type: Number, required: true, min: 1, max: 5 },
-    comment: String,
-    date: { type: Date, default: Date.now }
-  }],
-
   workImages: [{
     url: { type: String, required: true },
     thumbnail: { type: String, required: true },
     deleteUrl: { type: String, required: true },
-    caption: { type: String },
+    description: { type: String },
     uploadedAt: { type: Date, default: Date.now }
   }],
+  videoUrls: [{
+    url: { type: String },
+    thumbnail: { type: String },
+    title: { type: String }
+  }],
 
-  services: [{
-    name: { type: String, required: true },
-    description: { type: String },
-    price: { type: Number, required: true },
+  // Reviews and Ratings
+  reviews: [{
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    rating: { type: Number, required: true, min: 1, max: 5 },
+    review: { type: String },
     images: [{
-      url: { type: String, required: true },
-      thumbnail: { type: String, required: true },
-      deleteUrl: { type: String, required: true },
-      caption: { type: String }
-    }]
-  }]
-}, { 
-  timestamps: true 
+      url: String,
+      caption: String
+    }],
+    createdAt: { type: Date, default: Date.now },
+    isVerified: { type: Boolean, default: false }
+  }],
+  averageRating: { 
+    type: Number, 
+    default: 0,
+    min: 0,
+    max: 5
+  },
+  totalReviews: {
+    type: Number,
+    default: 0
+  },
+
+  // Business Details
+  businessHours: [{
+    day: { 
+      type: String,
+      enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    },
+    isOpen: { type: Boolean, default: true },
+    openTime: String,
+    closeTime: String
+  }],
+  paymentMethods: [{
+    type: String,
+    enum: ['Cash', 'Card', 'UPI', 'Bank Transfer', 'Other']
+  }],
+  cancellationPolicy: {
+    type: String,
+    enum: ['Flexible', 'Moderate', 'Strict']
+  },
+
+  // Verification and Status
+  isVerified: { type: Boolean, default: false },
+  verificationDate: Date,
+  status: { 
+    type: String,
+    enum: ['Active', 'Inactive', 'Pending', 'Suspended'],
+    default: 'Pending'
+  },
+  featured: { type: Boolean, default: false },
+
+  // Analytics
+  views: { type: Number, default: 0 },
+  bookmarks: { type: Number, default: 0 },
+  inquiries: { type: Number, default: 0 },
+  responseRate: { type: Number, default: 0 },
+  responseTime: { type: Number }, // in minutes
+
+  // Timestamps
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
 });
 
-// Add index for location-based queries
-vendorSchema.index({ 'location.city': 1, 'location.state': 1 });
-
-// Add index for service category and rating
-vendorSchema.index({ serviceCategory: 1, 'rating.average': -1 });
-
-// Add index for availability queries
-vendorSchema.index({ 'availability.date': 1, 'availability.isFullyBooked': 1 });
-
-// Add index for image-related queries
-vendorSchema.index({ 'workImages.uploadedAt': -1 });
-vendorSchema.index({ 'gallery.uploadedAt': -1 });
-
-// Pre-save middleware to validate and clean up images
+// Update timestamp before saving
 vendorSchema.pre('save', function(next) {
-  // Clean up work images
-  if (this.workImages) {
-    this.workImages = this.workImages.filter(img => 
-      img.url && img.thumbnail && img.deleteUrl
-    );
-  }
+  this.updatedAt = Date.now();
+  next();
+});
 
-  // Clean up gallery images
-  if (this.gallery) {
-    this.gallery = this.gallery.filter(img => 
-      img.url && img.thumbnail && img.deleteUrl
-    );
+// Calculate average rating before saving
+vendorSchema.pre('save', function(next) {
+  if (this.reviews.length > 0) {
+    const totalRating = this.reviews.reduce((acc, review) => acc + review.rating, 0);
+    this.averageRating = totalRating / this.reviews.length;
+    this.totalReviews = this.reviews.length;
   }
-
-  // Clean up service images
-  if (this.services) {
-    this.services.forEach(service => {
-      if (service.images) {
-        service.images = service.images.filter(img => 
-          img.url && img.thumbnail && img.deleteUrl
-        );
-      }
-    });
-  }
-
   next();
 });
 
@@ -198,5 +218,23 @@ vendorSchema.methods.removeGalleryImage = async function(imageUrl) {
   }
   return false;
 };
+
+// Indexes for search and filtering
+vendorSchema.index({ 'location.city': 1, serviceCategory: 1 });
+vendorSchema.index({ 'location.coordinates': '2dsphere' });
+vendorSchema.index({ averageRating: -1 });
+vendorSchema.index({ 'priceRange.min': 1, 'priceRange.max': 1 });
+vendorSchema.index({ tags: 1 });
+vendorSchema.index({ featured: 1 });
+vendorSchema.index({ status: 1 });
+
+// Full text search indexes
+vendorSchema.index({
+  businessName: 'text',
+  serviceDescription: 'text',
+  tags: 'text',
+  specialties: 'text',
+  'location.city': 'text'
+});
 
 module.exports = mongoose.model('Vendor', vendorSchema);
