@@ -15,7 +15,7 @@ router.post('/:bookingId/payment', bookingController.processPayment);
 
 // Booking management routes
 router.get('/user', bookingController.getUserBookings);
-router.get('/vendor/:vendorId', restrictTo('vendor', 'admin'), bookingController.getVendorBookings);
+router.get('/vendor/:vendorId', restrictTo(['vendor', 'admin']), bookingController.getVendorBookings);
 router.get('/:bookingId', bookingController.getBooking);
 router.post('/:bookingId/messages', bookingController.addMessage);
 router.patch('/:bookingId/cancel', bookingController.cancelBooking);

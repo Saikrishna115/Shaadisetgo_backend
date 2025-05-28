@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const AppError = require('../utils/appError');
 
 /**
  * Middleware to verify JWT token and attach user to request
@@ -7,19 +8,7 @@ const User = require('../models/User');
  * @param {Object} res - Express response object
  * @param {Function} next - Express next middleware function
  */
-const authorize = (role) => {
-  return (req, res, next) => {
-    if (req.user && req.user.role === role) {
-      return next();
-    }
-    return res.status(403).json({
-      success: false,
-      message: 'Access denied. Insufficient permissions.'
-    });
-  };
-};
-
-const verifyToken = async (req, res, next) => {
+const protect = async (req, res, next) => {
   try {
     // Check for token in Authorization header or secure cookie
     let token = null;
@@ -50,28 +39,60 @@ const verifyToken = async (req, res, next) => {
       });
     }
 
-    // Fetch user from database to ensure they still exist and are active
-    const user = await User.findById(decoded._id).select('-password');
+    // Check if user still exists
+    const user = await User.findById(decoded._id).select('+passwordChangedAt');
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'User not found or deactivated.'
+        message: 'User no longer exists.'
       });
     }
 
-    // Attach user object to request for use in subsequent middleware/routes
+    // Check if user changed password after token was issued
+    if (user.passwordChangedAt && decoded.iat < user.passwordChangedAt.getTime() / 1000) {
+      return res.status(401).json({
+        success: false,
+        message: 'Password was changed. Please log in again.'
+      });
+    }
+
+    // Attach user to request object
     req.user = user;
     next();
-  } catch (err) {
-    console.error('Auth Middleware Error:', err);
-    return res.status(401).json({
-      success: false,
-      message: 'Authentication failed',
-      error: err.name === 'TokenExpiredError' 
-        ? 'Token has expired. Please login again.' 
-        : 'Invalid token. Please login again.'
-    });
+  } catch (error) {
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token. Please log in again.'
+      });
+    }
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Token expired. Please log in again.'
+      });
+    }
+    next(error);
   }
 };
 
-module.exports = { verifyToken, authorize };
+/**
+ * Middleware to restrict access to specific roles
+ * @param {Array} roles - Array of allowed roles
+ */
+const restrictTo = (roles) => {
+  return (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to perform this action'
+      });
+    }
+    next();
+  };
+};
+
+module.exports = {
+  protect,
+  restrictTo
+};
