@@ -8,16 +8,14 @@ const { protect, restrictTo } = require('../middleware/authMiddleware');
 router.use(protect);
 
 // Multi-step booking process routes
-router.post('/initialize', bookingController.initializeBooking);
-router.patch('/:bookingId/event-details', bookingController.updateEventDetails);
-router.patch('/:bookingId/package', bookingController.selectPackage);
-router.post('/:bookingId/payment', bookingController.processPayment);
+router.post('/', bookingController.createBooking);
+router.patch('/:id', bookingController.updateBooking);
 
 // Booking management routes
-router.get('/user', bookingController.getUserBookings);
+router.get('/user', bookingController.getCustomerBookings);
 router.get('/vendor/:vendorId', restrictTo(['vendor', 'admin']), bookingController.getVendorBookings);
-router.get('/:bookingId', bookingController.getBooking);
-router.post('/:bookingId/messages', bookingController.addMessage);
-router.patch('/:bookingId/cancel', bookingController.cancelBooking);
+router.get('/:id', bookingController.getBookingById);
+router.patch('/:id/cancel', bookingController.cancelBooking);
+router.patch('/:id/status', restrictTo(['vendor']), bookingController.updateVendorStatus);
 
 module.exports = router;
